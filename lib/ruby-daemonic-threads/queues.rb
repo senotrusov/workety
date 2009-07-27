@@ -15,10 +15,10 @@
 
 
 # NOTE:
-#   It is not a quarantied delivery queues.
-#   It rely on normal process startup/shutdown sequence. 
-#   So, if you get sigfault all data will be lost.
-#   On the other hand, queues tends to be quite quickly, since all done in memory  
+#   This is not a quarantied delivery queues.
+#   They rely on normal process startup/shutdown sequence. 
+#   So, if you got segfault all data will be lost.
+#   On the other hand, queues tends to be quite quickly  
 
 class DaemonicThreads::Queues
 
@@ -40,12 +40,13 @@ class DaemonicThreads::Queues
       else
         @queues[name] = SmartQueue.new
       end
+      @queues[name].persistent = true
     end
   end
   
   def store
     @queues.each do |name, queue|
-      File.write("#{@storage_dir}/#{name}", queue.to_storage)
+      File.write("#{@storage_dir}/#{name}", queue.to_storage) if queue.persistent
     end
   end
 

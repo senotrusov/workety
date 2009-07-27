@@ -82,8 +82,8 @@ module DaemonicThreads::HTTP::Daemon
   REST_METHODS = {"POST" => "create", "PUT" => "update", "DELETE" => "destroy"}
   
   def determine_http_action request
-  
-    if request.requested_id
+    
+    if request.requested_id 
       if respond_to?(request.requested_id) && !request.requested_action
         action = request.requested_id
       else

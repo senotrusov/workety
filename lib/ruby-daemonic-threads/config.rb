@@ -23,6 +23,8 @@ class DaemonicThreads::Config
     @queue_names = get_queue_names
     
     @daemons.each do |name, config|
+      raise "Class name for daemon `#{name}' must be specified" if config["class"].nil? || config["class"].empty?
+       
       config["class-constantized"] = config["class"].constantize
     end    
     
@@ -39,7 +41,7 @@ class DaemonicThreads::Config
     @daemons.collect do |name, config|
       if config["queues"] 
         config["queues"].each do |queue_daemon_handler, queue_name|
-          names.push queue_name
+          names.push queue_name.to_sym
         end
       end 
     end

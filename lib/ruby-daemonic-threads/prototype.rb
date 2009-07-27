@@ -58,9 +58,15 @@ module DaemonicThreads::Prototype
     @logger = Rails.logger
     @parent = parent
     
+    @queues = {}
+    
     @config["queues"].each do |queue_handler, queue_name|
-      instance_variable_set("@#{queue_handler}", @process.queues[queue_name])
+      @queues[queue_handler.to_sym] = @process.queues[queue_name.to_sym]
     end if @config["queues"]
+      
+    @queues.each do |queue_handler, queue|
+      instance_variable_set("@#{queue_handler}", queue)
+    end
     
     @threads = ThreadGroup.new
     @daemons = []
@@ -95,10 +101,10 @@ module DaemonicThreads::Prototype
     @daemons.each {|daemon| daemon.stop }
     
     @threads.list.each do |thread|
-      @config["queues"].each do |queue_handler, queue_name|
-        instance_variable_get("@#{queue_handler}").release_blocked thread
+      @queues.each do |queue_handler, queue|
+        queue.release_blocked thread
       end
-    end if @config["queues"]
+    end unless @queues.empty?
   end
   
   

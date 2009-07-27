@@ -182,7 +182,9 @@ class DaemonicThreads::HTTP::HttpRequest
   attr_reader :requested_format, :requested_id, :requested_action # nil or string
   
   def correct?
-    [Mime::XML, Mime::JSON, nil].include?(requested_format)
+    [Mime::XML, Mime::JSON, nil].include?(requested_format) &&
+    (@requested_id.nil? || !@requested_id.blank?) &&
+    (@requested_action.nil? || !@requested_action.blank?)
   end
   
   def request_method
@@ -344,7 +346,12 @@ class DaemonicThreads::HTTP::HttpRequest
       @response.start(status_code) do |head, out|
         head["Location"] = location if location
         head["Content-Type"] = (options[:content_type] || format).to_s
-        out.write(data) unless head?
+        
+        unless head?
+          Rails.logger.debug { "HTTP RESPONSE:\n#{data}" }
+          out.write(data)
+        end
+         
       end
     end
   end
