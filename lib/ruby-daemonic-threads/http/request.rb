@@ -280,6 +280,7 @@ class DaemonicThreads::HTTP::HttpRequest
   # Based on ActionController::Base
   #
   # response object||string [, options]
+  # response :object => object||string [, options] -- Then response is hash
   # response :xml => object||string [, options]
   # response :json => object||string [, options]
   # response :text => string [, options]
@@ -303,6 +304,8 @@ class DaemonicThreads::HTTP::HttpRequest
         format = Mime::XML
       elsif data = options[:json]
         format = Mime::JSON 
+      elsif data = options[:object]
+        format = requested_format || Mime::XML
       elsif data = options[:text]
         data = data.to_s
         format = Mime::HTML 

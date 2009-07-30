@@ -16,7 +16,7 @@
 
 spec = Gem::Specification.new do |s|
   s.name          = "ruby-daemonic-threads"
-  s.version       = "1.0.2"
+  s.version       = "1.0.3"
   s.date          = Time.now
   
   s.has_rdoc      = true
@@ -41,9 +41,16 @@ end
 task :default => [:gemspec]
 
 task :gemspec do
-  File.open("#{spec.name}.gemspec", 'w') do |file|
-    file.write spec.to_ruby
+  specfile = "#{spec.name}.gemspec"
+  
+  if !File.exists?(specfile) || Gem::Specification.load(specfile).version != spec.version
+    File.open("#{spec.name}.gemspec", 'w') do |file|
+      file.write spec.to_ruby
+    end
+    puts "gemspec created"
+  else
+    puts "gemspec was not created - existing gemspec has the same version"
   end
-  puts "gemspec created"
 end
+
 

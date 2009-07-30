@@ -129,19 +129,19 @@ module DaemonicThreads::Prototype
   
   
   # Можно запускать из initialize_daemon или из любого треда
-  def spawn_thread(thread_name, *args)
+  def spawn_thread(thread_name, *args, &block)
     @creatures_mutex.synchronize do
       raise(DaemonicThreads::MustTerminatedState, "Unable to spawn new threads after stop() is called") if @must_terminate
       
       thread_title = "#{self.class}#thread:`#{thread_name}' @name:`#{@name}'"
       
-      @threads.add(thread = Thread.new { execute_thread(thread_name, thread_title, args) } )
+      @threads.add(thread = Thread.new { execute_thread(thread_name, thread_title, *args, &block) } )
       
       return thread
     end
   end
   
-  def execute_thread(thread_name, thread_title, args)
+  def execute_thread(thread_name, thread_title, *args)
    
     panic_on_exception(thread_title) do
       Thread.current[:title] = thread_title
