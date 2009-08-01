@@ -16,7 +16,7 @@
 
 spec = Gem::Specification.new do |s|
   s.name          = "ruby-daemonic-threads"
-  s.version       = "1.0.3"
+  s.version       = "1.0.4"
   s.date          = Time.now
   
   s.has_rdoc      = true

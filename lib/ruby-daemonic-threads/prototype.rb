@@ -73,8 +73,6 @@ module DaemonicThreads::Prototype
     @creatures_mutex = Mutex.new
     @stop_condition = ConditionVariable.new
     @must_terminate = false
-    
-    initialize_http if respond_to?(:initialize_http)
   end
   
   attr_reader :logger
@@ -110,6 +108,7 @@ module DaemonicThreads::Prototype
   
   def perform_initialize_daemon(*args)
     initialize_daemon(*args) if respond_to? :initialize_daemon
+    initialize_http if respond_to?(:initialize_http)
   end
   
 
