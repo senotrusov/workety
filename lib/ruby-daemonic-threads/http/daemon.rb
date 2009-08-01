@@ -59,7 +59,10 @@ module DaemonicThreads::HTTP::Daemon
       
       log(:debug) { "HTTP REQUEST -- ACTION: #{action.inspect} FORMAT: #{request.requested_format} PARAMS: #{request.params.inspect}" }
       
-
+      unless respond_to?(action)
+        return request.error(404, "There is no such action")
+      end
+        
       begin
         result = __send__(action, request)
         request.response(result) unless request.response_sent?
