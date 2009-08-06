@@ -213,7 +213,7 @@ class DaemonicThreads::HTTP::HttpRequest
   
 
   def log! logger, severity = :fatal, title = nil
-    logger.__send__(severity, "#{title} -- #{self.inspect rescue "EXCEPTION CALLING inspect()"}\n -- Request body: #{body.inspect rescue "EXCEPTION CALLING body()"}")
+    logger.__send__(severity) {"#{title} -- #{self.inspect rescue "EXCEPTION CALLING inspect()"}\n -- Request body: #{body.inspect rescue "EXCEPTION CALLING body()"}"}
     logger.flush if logger.respond_to?(:flush)
   end
 

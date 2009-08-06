@@ -192,7 +192,7 @@ module DaemonicThreads::Prototype
   
   
   def log severity, message = nil
-    @logger.__send__(severity, "#{self.class}##{caller.first.match(/`(.*)'/)[1]} -- #{block_given? ? yield : message}" )
+    @logger.__send__(severity) {"#{self.class}##{caller.first.match(/`(.*)'/)[1]} -- #{block_given? ? yield : message}"}
   end
   
 end

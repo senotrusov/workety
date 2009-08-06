@@ -87,7 +87,7 @@ class DaemonicThreads::Runner
         return if @must_terminate
         @restarting = false
         
-        @logger.info "#{self.class}#watchdog @name:`#{@name}' -- Starting..."
+        @logger.info {"#{self.class}#watchdog @name:`#{@name}' -- Starting..."}
         @daemon = @config["class-constantized"].new(@name, self)
       end
       
@@ -107,7 +107,7 @@ class DaemonicThreads::Runner
   def delay
     @mutex.synchronize do
       unless @must_terminate
-        @logger.info "#{self.class}#delay @name:`#{@name}' -- Catch termination, restarting in #{RESTART_DELAY} seconds..."
+        @logger.info {"#{self.class}#delay @name:`#{@name}' -- Catch termination, restarting in #{RESTART_DELAY} seconds..."}
         
         Thread.new_with_exception_handling(lambda { @process.controller.stop }, @logger, :fatal, "#{self.class}#delay @name:`#{@name}'") do
           # Если кто-то пошлёт сигнал во время сна, ожидающий получит два сигнала по пробуждении. В этом конкретном случае это не ппроблема, потому как этот кто-то - это стоп, и после него получать сигнал будет некому

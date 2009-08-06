@@ -28,7 +28,7 @@ class DaemonicThreads::Config
       config["class-constantized"] = config["class"].constantize
     end    
     
-    Rails.logger.debug("#{self.class}#initialize -- Configuration: #{self.inspect}") if Rails.logger.debug?
+    Rails.logger.debug {"#{self.class}#initialize -- Configuration: #{self.inspect}"}
   end
   
   attr_reader :queue_names, :daemons
