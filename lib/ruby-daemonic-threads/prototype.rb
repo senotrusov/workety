@@ -107,8 +107,8 @@ module DaemonicThreads::Prototype
   
   
   def perform_initialize_daemon(*args)
-    initialize_daemon(*args) if respond_to? :initialize_daemon
     initialize_http if respond_to?(:initialize_http)
+    initialize_daemon(*args) if respond_to? :initialize_daemon
   end
   
 

@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-daemonic-threads}
-  s.version = "1.0.5"
+  s.version = "1.0.6"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Stanislav Senotrusov"]
-  s.date = %q{2009-08-01}
+  s.date = %q{2009-08-06}
   s.email = %q{senotrusov@gmail.com}
   s.extra_rdoc_files = ["README", "LICENSE"]
   s.files = ["README", "LICENSE", "lib/ruby-daemonic-threads", "lib/ruby-daemonic-threads/config.rb", "lib/ruby-daemonic-threads/patches", "lib/ruby-daemonic-threads/patches/timezone.rb", "lib/ruby-daemonic-threads/prototype.rb", "lib/ruby-daemonic-threads/http.rb", "lib/ruby-daemonic-threads/runner.rb", "lib/ruby-daemonic-threads/process.rb", "lib/ruby-daemonic-threads/queues.rb", "lib/ruby-daemonic-threads/daemons.rb", "lib/ruby-daemonic-threads/http", "lib/ruby-daemonic-threads/http/server.rb", "lib/ruby-daemonic-threads/http/request.rb", "lib/ruby-daemonic-threads/http/daemon.rb", "lib/ruby-daemonic-threads.rb"]
