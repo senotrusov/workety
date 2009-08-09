@@ -29,8 +29,6 @@ class DaemonicThreads::Process
   attr_reader :controller, :name, :config, :http, :queues, :daemons
   
   def start
-    @queues.restore
-    
     @http.start
     @daemons.start
   end
@@ -46,7 +44,7 @@ class DaemonicThreads::Process
   end
 
   def before_exit
-    @queues.store
+    @queues.store_and_close
   end
 
 end

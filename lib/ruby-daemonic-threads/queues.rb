@@ -21,53 +21,33 @@
 #   On the other hand, queues tends to be quite quickly  
 
 class DaemonicThreads::Queues
-
   DEFAULT_STORAGE_DIR = Rails.root + 'tmp' + 'queues'
 
   def initialize(process)
     @queues = {}
+    @config = process.config.queues
+
     @storage_dir = DEFAULT_STORAGE_DIR
-    @queue_names = process.config.queue_names 
+    @storage_dir.mkpath
     
-    raise("Queues storage directory #{@storage_dir} is not available!") unless storage_available?
-  end
-  
-  def restore
-    @queue_names.each do |name|
-      if File.exists?(filename = "#{@storage_dir}/#{name}")
-        @queues[name] = SmartQueue.new(File.read(filename))
-        File.unlink(filename)
-      else
-        @queues[name] = SmartQueue.new
+    @config.each do |name, config|
+      queue = @queues[name.to_sym] = config["class-constantized"].new
+      
+      if queue.respond_to?(:restore)
+        queue.storage = @storage_dir + name
+        queue.restore
       end
-      @queues[name].persistent = true
     end
   end
   
-  def store
+  def store_and_close
     @queues.each do |name, queue|
-      File.write("#{@storage_dir}/#{name}", queue.to_storage) if queue.persistent
+      queue.store_and_close if queue.respond_to?(:store_and_close)
     end
   end
 
   def [] name
     @queues[name]
   end
-  
-  private
-
-  def storage_available?
-    if File.directory?(@storage_dir) && File.writable?(@storage_dir)
-      return true
-    else
-      begin
-        Dir.mkdir(@storage_dir)
-        return true
-      rescue SystemCallError
-        return false
-      end
-    end
-  end
-  
 end
 

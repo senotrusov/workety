@@ -20,28 +20,42 @@ class DaemonicThreads::Config
       config["environment"] && !(config["environment"].split(/ *, */).include?(Rails.env))
     end
     
-    @queue_names = get_queue_names
+    @queues = @daemons.delete("queues") || {}
+    
+    daemons_use_queues.each do |name|
+      @queues[name] ||= {}
+    end
+    
+    @queues.each do |name, config|
+      config = @queues[name] = {} unless config
+
+      if config["class"].nil? || config["class"].empty?
+        config["class-constantized"] = PersistentQueue
+      else
+        config["class-constantized"] = config["class"].constantize
+      end
+    end
     
     @daemons.each do |name, config|
       raise "Class name for daemon `#{name}' must be specified" if config["class"].nil? || config["class"].empty?
        
       config["class-constantized"] = config["class"].constantize
-    end    
+    end
     
     Rails.logger.debug {"#{self.class}#initialize -- Configuration: #{self.inspect}"}
   end
   
-  attr_reader :queue_names, :daemons
+  attr_reader :queues, :daemons
   
   private
   
-  def get_queue_names
+  def daemons_use_queues
     names = []
     
     @daemons.collect do |name, config|
       if config["queues"] 
         config["queues"].each do |queue_daemon_handler, queue_name|
-          names.push queue_name.to_sym
+          names.push queue_name
         end
       end 
     end
