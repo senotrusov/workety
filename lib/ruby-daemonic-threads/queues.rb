@@ -31,13 +31,20 @@ class DaemonicThreads::Queues
     @storage_dir.mkpath
     
     @config.each do |name, config|
+    
       queue = @queues[name.to_sym] = config["class-constantized"].new
       
       if queue.respond_to?(:restore)
         queue.storage = @storage_dir + name
         queue.restore
       end
+
+      if queue.respond_to?(:config=)
+        queue.config = config
+      end
+      
     end
+    
   end
   
   def store_and_close
