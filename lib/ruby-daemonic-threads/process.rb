@@ -20,7 +20,11 @@ class DaemonicThreads::Process
     @controller = controller
     @name = controller.name
     
-    @config = DaemonicThreads::Config.new(RAILS_ROOT + '/config/daemons.yml')
+    @controller.argv.option "-c, --config CONFIG", "Config file relative to Rails.root (#{Rails.root}), defaults to config/daemons.yml"
+    
+    config_file = Rails.root + (@controller.argv["CONFIG"] || 'config/daemons.yml')
+    
+    @config = DaemonicThreads::Config.new(config_file)
     @http = DaemonicThreads::HTTP::Server.new(self)
     @queues = DaemonicThreads::Queues.new(self)
     @daemons = DaemonicThreads::Daemons.new(self)
@@ -29,6 +33,7 @@ class DaemonicThreads::Process
   attr_reader :controller, :name, :config, :http, :queues, :daemons
   
   def start
+    @queues.start
     @http.start
     @daemons.start
   end

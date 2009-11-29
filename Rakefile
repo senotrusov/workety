@@ -14,43 +14,25 @@
 #  limitations under the License.
 
 
-spec = Gem::Specification.new do |s|
-  s.name          = "ruby-daemonic-threads"
-  s.version       = "1.0.9"
-  s.date          = Time.now
+begin
+  require 'jeweler'
   
-  s.has_rdoc      = true
-  s.rdoc_options  << '--inline-source' << '--charset=UTF-8'
-  s.extra_rdoc_files = %w(README LICENSE)
-  
-  s.summary       = "Create multithreaded applications with smart persistent internal queues, WEB/REST interface, exception handling and recovery"
-  s.author        = "Stanislav Senotrusov"
-  s.email         = "senotrusov@gmail.com"
-  s.homepage      = "http://github.com/senotrusov"
-  
-  s.require_path  = 'lib'
-  s.files         = %w(README LICENSE) + Dir.glob("{lib,test}/**/*")
-  
-  s.add_dependency 'mongrel'
-  s.add_dependency "senotrusov-ruby-toolkit"
-  s.add_dependency "senotrusov-ruby-threading-toolkit"
-  s.add_dependency "senotrusov-ruby-process-controller"
-end
-
-
-task :default => [:gemspec]
-
-task :gemspec do
-  specfile = "#{spec.name}.gemspec"
-  
-  if !File.exists?(specfile) || Gem::Specification.load(specfile).version != spec.version
-    File.open("#{spec.name}.gemspec", 'w') do |file|
-      file.write spec.to_ruby
-    end
-    puts "gemspec created"
-  else
-    puts "gemspec was not created - existing gemspec has the same version"
+  Jeweler::Tasks.new do |gemspec|
+    gemspec.name = "ruby-daemonic-threads"
+    gemspec.summary = "Create multithreaded applications with smart persistent internal queues, WEB/REST interface, exception handling and recovery"
+    gemspec.email = "senotrusov@gmail.com"
+    gemspec.homepage = "http://github.com/senotrusov/ruby-daemonic-threads"
+    gemspec.authors = ["Stanislav Senotrusov"]
+    
+    gemspec.add_dependency 'mongrel'
+    gemspec.add_dependency "senotrusov-ruby-toolkit"
+    gemspec.add_dependency "ruby-threading-toolkit"
+    gemspec.add_dependency "ruby-process-controller"
   end
+  
+  Jeweler::GemcutterTasks.new
+  
+rescue LoadError
+  puts "Jeweler not available. Install it with: sudo gem install jeweler"
 end
-
 

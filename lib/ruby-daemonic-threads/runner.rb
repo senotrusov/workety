@@ -19,7 +19,7 @@ class DaemonicThreads::Runner
   
   def initialize(name, config, process)
     @name = name
-    @config = config
+    @config = config.with_indifferent_access
     @process = process
     @logger = Rails.logger
     
@@ -32,7 +32,7 @@ class DaemonicThreads::Runner
   attr_reader :name, :config, :process
   
   def start
-    @watchdog_thread = Thread.new_with_exception_handling(lambda { @process.controller.stop }, @logger, :fatal, "#{self.class}#watchdog @name:`#{@name}'") { watchdog }
+    @watchdog_thread = Thread.new_with_exception_handling(Proc.new { @process.controller.stop }, @logger, :fatal, "#{self.class}#watchdog @name:`#{@name}'") { watchdog }
   end
   
   def join
@@ -92,8 +92,10 @@ class DaemonicThreads::Runner
       end
       
       begin
-        @daemon.perform_initialize_daemon
-      rescue *(@config["class-constantized"]::RESTART_ON) => exception
+        @mutex.synchronize do
+          @daemon.perform_initialize_daemon
+        end
+      rescue *(@config["class-constantized"].restart_on_exceptions) => exception
         exception.log! @logger, :warn, "#{self.class}#watchdog @name:`#{@name}' -- Restarting daemon because of exception", (@process.controller.env == "production" ? :inspect : :inspect_with_backtrace)
         restart_daemon
       end
@@ -109,8 +111,8 @@ class DaemonicThreads::Runner
       unless @must_terminate
         @logger.info {"#{self.class}#delay @name:`#{@name}' -- Catch termination, restarting in #{RESTART_DELAY} seconds..."}
         
-        Thread.new_with_exception_handling(lambda { @process.controller.stop }, @logger, :fatal, "#{self.class}#delay @name:`#{@name}'") do
-          # Если кто-то пошлёт сигнал во время сна, ожидающий получит два сигнала по пробуждении. В этом конкретном случае это не ппроблема, потому как этот кто-то - это стоп, и после него получать сигнал будет некому
+        Thread.new_with_exception_handling(Proc.new { @process.controller.stop }, @logger, :fatal, "#{self.class}#delay @name:`#{@name}'") do
+          # Если кто-то пошлёт сигнал во время сна, ожидающий получит два сигнала по пробуждении. В этом конкретном случае это не проблема, потому как этот кто-то - это стоп, и после него получать сигнал будет некому
           sleep RESTART_DELAY
           @delay.signal
         end

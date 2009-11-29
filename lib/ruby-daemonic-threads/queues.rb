@@ -28,23 +28,27 @@ class DaemonicThreads::Queues
     @config = process.config.queues
 
     @storage_dir = DEFAULT_STORAGE_DIR
+  end
+  
+  def start
     @storage_dir.mkpath
     
     @config.each do |name, config|
-    
       queue = @queues[name.to_sym] = config["class-constantized"].new
-      
-      if queue.respond_to?(:restore)
+    end
+    
+    @config.each do |name, config|
+      if (queue = @queues[name.to_sym]).respond_to?(:configure)
+        queue.configure(name.to_sym, config, @queues)
+      end
+    end
+    
+    @config.each do |name, config|
+      if (queue = @queues[name.to_sym]).respond_to?(:restore)
         queue.storage = @storage_dir + name
         queue.restore
       end
-
-      if queue.respond_to?(:config=)
-        queue.config = config
-      end
-      
     end
-    
   end
   
   def store_and_close

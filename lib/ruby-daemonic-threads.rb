@@ -27,7 +27,7 @@ require "ruby-daemonic-threads/http/server.rb"
 require "ruby-daemonic-threads/http/request.rb"
 require "ruby-daemonic-threads/http/daemon.rb"
 require "ruby-daemonic-threads/process.rb"
-require "ruby-daemonic-threads/prototype.rb"
+require "ruby-daemonic-threads/base.rb"
 require "ruby-daemonic-threads/queues.rb"
 require "ruby-daemonic-threads/runner.rb"
 

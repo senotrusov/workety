@@ -35,7 +35,7 @@
 #  Таким образом, реализуется несколько боязливая стратегия работы - если что-то идёт не так, процесс останавливается.
 #  Рестарт демонов происходит только когда ошибка понятна, и она, скорее всего, не приводит к фатальным последствиям.
 #  Такой ошибкой является сбой сети.
-#  Если в ваших демонах есть другие понятные вам ошибки - ловити их сами или декларируйте в RESTART_ON.
+#  Если в ваших демонах есть другие понятные вам ошибки - ловити их сами или декларируйте в restart_on_exceptions.
 #
 #  Если тред запустит самостоятельно демона, то он может получить из этого демона exception.
 #  Если этот exception не относится к категории тех, которые решаются перезапуском демона, то весь процесс останавливается.
@@ -47,8 +47,9 @@
 #  может выполнятся секунду-другую, если exception случился паралельно.  
 
 
-module DaemonicThreads::Prototype
-  RESTART_ON = IPSocket::SOCKET_EXEPTIONS + [DaemonicThreads::MustTerminatedState] # TODO: inheritable
+class DaemonicThreads::Base
+  class_inheritable_array :restart_on_exceptions
+  self.restart_on_exceptions = IPSocket::SOCKET_EXEPTIONS + [DaemonicThreads::MustTerminatedState]
   
   def initialize(name, runner, parent = nil)
     @name = name
@@ -68,11 +69,15 @@ module DaemonicThreads::Prototype
       instance_variable_set("@#{queue_handler}", queue)
     end
     
-    @threads = ThreadGroup.new
+    @threads = {}
+    @thread_group = ThreadGroup.new
     @daemons = []
     @creatures_mutex = Mutex.new
     @stop_condition = ConditionVariable.new
     @must_terminate = false
+
+    @periodics_mutex = Mutex.new
+    @periodics = []
   end
   
   attr_reader :logger
@@ -86,7 +91,14 @@ module DaemonicThreads::Prototype
     
     @daemons.each {|daemon| daemon.join }
     
-    @threads.list.each {|thread| thread.join }
+    @thread_group.list.each {|thread| thread.join }
+
+    begin    
+      after_join if respond_to?(:after_join)
+    rescue *(restart_on_exceptions) => exception
+      exception.log!(@logger, :warn, "#{self.class}#after_join @name:`#{@name}'", (@process.controller.env == "production" ? :inspect : :inspect_with_backtrace))
+    end
+
   end
   
   
@@ -95,20 +107,33 @@ module DaemonicThreads::Prototype
       @must_terminate = true
       @stop_condition.signal
     end
+    
+    stop_periodics
 
     @daemons.each {|daemon| daemon.stop }
     
-    @threads.list.each do |thread|
+    @thread_group.list.each do |thread|
       @queues.each do |queue_handler, queue|
-        queue.release_blocked thread
+        queue.release_blocked(thread) if queue.respond_to?(:release_blocked) 
       end
     end unless @queues.empty?
+    
+    begin    
+      stop_daemon if respond_to?(:stop_daemon)
+    rescue *(restart_on_exceptions) => exception
+      exception.log!(@logger, :warn, "#{self.class}#stop_daemon @name:`#{@name}'", (@process.controller.env == "production" ? :inspect : :inspect_with_backtrace))
+    end
+    
+  end
+  
+  def restart_daemon
+    @runner.restart_daemon
   end
   
   
   def perform_initialize_daemon(*args)
-    initialize_http if respond_to?(:initialize_http)
     initialize_daemon(*args) if respond_to? :initialize_daemon
+    initialize_http if respond_to?(:initialize_http) # Must be at last line, so no HTTP requests to uninitialized daemon 
   end
   
 
@@ -128,45 +153,49 @@ module DaemonicThreads::Prototype
   
   
   # Можно запускать из initialize_daemon или из любого треда
-  def spawn_thread(thread_name, *args, &block)
+  def spawn_thread(thread_name, *args)
     @creatures_mutex.synchronize do
       raise(DaemonicThreads::MustTerminatedState, "Unable to spawn new threads after stop() is called") if @must_terminate
       
-      thread_title = "#{self.class}#thread:`#{thread_name}' @name:`#{@name}'"
+      thread = spawn_untracked_thread(thread_name) do
+        begin
+          if block_given?
+            yield(*args)
+          elsif respond_to?(thread_name)
+            __send__(thread_name, *args)
+          else
+            raise("Thread block was not given or method `#{thread_name}' not found. Don't know what to do.")
+          end
+        ensure
+          panic_on_exception("#{self.class}#thread:`#{thread_name}' @name:`#{@name}' -- Release ActiveRecord connection to pool") { ActiveRecord::Base.clear_active_connections! }
+        end
+      end
       
-      @threads.add(thread = Thread.new { execute_thread(thread_name, thread_title, *args, &block) } )
+      @threads[thread_name] = thread if @threads_by_name_needed
+      @thread_group.add thread
       
       return thread
     end
   end
   
-  def execute_thread(thread_name, thread_title, *args)
-   
-    panic_on_exception(thread_title) do
-      Thread.current[:title] = thread_title
-      Thread.current[:started_at] = Time.now
-      
-      if block_given?
-        yield(*args)
-      elsif respond_to?(thread_name)
-        __send__(thread_name, *args)
-      else
-        raise("Thread block was not given or method `#{thread_name}' not found. Don't know what to do.")
+  def spawn_untracked_thread thread_name
+    thread_title = "#{self.class}#thread:`#{thread_name}' @name:`#{@name}'" # TODO copypasta from above
+    Thread.new do
+      panic_on_exception(thread_title) do
+        Thread.current[:title] = thread_title
+        Thread.current[:started_at] = Time.now
+        yield
       end
     end
-    
-  ensure
-    panic_on_exception("#{thread_title} -- Release ActiveRecord connection to pool") { ActiveRecord::Base.clear_active_connections! }
   end
-  
   
   def panic_on_exception(title = nil, handler = nil)
     yield
-  rescue *(RESTART_ON) => exception
+  rescue *(restart_on_exceptions) => exception
     begin
       exception.log!(@logger, :warn, title, (@process.controller.env == "production" ? :inspect : :inspect_with_backtrace))
       handler.call(exception) if handler
-      @runner.restart_daemon
+      restart_daemon
     rescue Exception => handler_exception
       begin
         handler_exception.log!(@logger, :fatal, title)
@@ -185,6 +214,13 @@ module DaemonicThreads::Prototype
     end
   end
   
+  def thread name
+    @creatures_mutex.synchronize {@thread[name]}
+  end
+  
+  def need_threads_by_name
+    @threads_by_name_needed = true
+  end
   
   def must_terminate?
     @creatures_mutex.synchronize { @must_terminate }
@@ -193,6 +229,48 @@ module DaemonicThreads::Prototype
   
   def log severity, message = nil
     @logger.__send__(severity) {"#{self.class}##{caller.first.match(/`(.*)'/)[1]} -- #{block_given? ? yield : message}"}
+  end
+  
+  def every(duration)
+    mutex = Mutex.new
+    condition = ConditionVariable.new
+    thread_title = "every #{duration.inspect} timer"
+    duration = duration.value if duration.is_a?(ActiveSupport::Duration)
+    
+    @periodics_mutex.synchronize do
+      return if must_terminate?
+      @periodics.push [mutex, condition]
+    end
+    
+    thread_args = [Proc.new { @process.controller.stop }, @logger, :fatal, "#{self.class}#every @name:`#{@name}'"]
+
+    begin
+      mutex.synchronize do
+        until must_terminate?
+          yield
+          ActiveRecord::Base.clear_active_connections! if duration >= 60
+          
+          spawn_untracked_thread(thread_title) do
+            sleep duration
+            mutex.synchronize { condition.signal }
+          end
+           
+          condition.wait(mutex)
+        end
+      end
+    ensure
+      @periodics_mutex.synchronize do
+        @periodics.delete [mutex, condition]
+      end
+    end
+  end
+  
+  def stop_periodics
+    @periodics_mutex.synchronize do
+      @periodics.each do |mutex, condition|
+        mutex.synchronize { condition.signal }
+      end
+    end
   end
   
 end

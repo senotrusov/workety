@@ -38,13 +38,13 @@ module DaemonicThreads::HTTP::Daemon
   def process(mongrel_request, mongrel_response)
     request = DaemonicThreads::HTTP::HttpRequest.new(mongrel_request, mongrel_response)
     
-    panic_on_exception("HTTP request -- Processing", lambda { request.error(500, "Daemon encouners an exception"); request.log!(@logger) }) do
+    panic_on_exception("HTTP request -- Processing", Proc.new { request.error(500, "Daemon encouners an exception"); request.log!(@logger) }) do
 
       @creatures_mutex.synchronize do
         if @must_terminate
           return request.error(503, "Daemon is in termination sequence now and can't serve your request")
         else
-          @threads.add Thread.current
+          @thread_group.add Thread.current
         end
       end
       
