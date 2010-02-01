@@ -57,12 +57,13 @@ class DaemonicThreads::HTTP::Server
   # I do not know why @acceptor.join tends to hang forever on ruby 1.9.1p243 (2009-07-16 revision 24175) [i686-linux], while on ruby 1.8 it was fine
   def join
     raise "DaemonicThreads::HTTP::Server#join unimplemented"
-    @acceptor.join if @acceptor
+    @acceptor.join
   end    
   
   def stop
-    # Until join() is unimplemented stop() must be synchronous
-    @server.stop true
+    # Until join() is unimplemented stop() must be synchronous. Mongrel synchronous stop is too lazy (sleep 0.5)
+    @server.stop
+    sleep(0.1) while @acceptor.alive?
   end
   
   def register uri, handler
