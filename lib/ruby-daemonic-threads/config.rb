@@ -16,7 +16,7 @@
 
 class DaemonicThreads::Config
   def initialize(filename)
-    @daemons = YAML::load(ERB.new(filename.read).result).reject do |name, config|
+    @daemons = (YAML::load(ERB.new(filename.read).result) || {}).reject do |name, config|
       config["environment"] && !(config["environment"].split(/ *, */).include?(Rails.env))
     end
     

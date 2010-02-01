@@ -21,8 +21,9 @@ class DaemonicThreads::Process
     @name = controller.name
     
     @controller.argv.option "-c, --config CONFIG", "Config file relative to \#{Rails.root} (#{Rails.root}), defaults to config/daemons.yml"
+    @controller.argv.parse!
     
-    config_file = Rails.root + (@controller.argv["CONFIG"] || 'config/daemons.yml')
+    config_file = Rails.root + (@controller.argv["config"] || 'config/daemons.yml')
     
     @config = DaemonicThreads::Config.new(config_file)
     @http = DaemonicThreads::HTTP::Server.new(self)
@@ -39,7 +40,8 @@ class DaemonicThreads::Process
   end
   
   def join
-    @http.join
+    # Unimplemented
+    # @http.join
     @daemons.join
   end    
   

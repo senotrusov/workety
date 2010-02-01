@@ -49,17 +49,20 @@ class DaemonicThreads::HTTP::Server
   attr_reader :prefix
   
   def start
-    @server.run
+    @acceptor = @server.run
     
     register("/#{@prefix}/status", Mongrel::StatusHandler.new)
   end
   
+  # I do not know why @acceptor.join tends to hang forever on ruby 1.9.1p243 (2009-07-16 revision 24175) [i686-linux], while on ruby 1.8 it was fine
   def join
-    @server.acceptor.join if @server.acceptor 
+    raise "DaemonicThreads::HTTP::Server#join unimplemented"
+    @acceptor.join if @acceptor
   end    
   
   def stop
-    @server.stop
+    # Until join() is unimplemented stop() must be synchronous
+    @server.stop true
   end
   
   def register uri, handler
