@@ -20,9 +20,9 @@ class DaemonicThreads::Process
     @controller = controller
     @name = controller.name
     
-    @controller.argv.option "-c, --config CONFIG", "Config file relative to Rails.root (#{Rails.root}), defaults to config/daemons.yml"
+    @controller.argv.option "-c, --config CONFIG", "Config file relative to \#{Rails.root}/config (#{Rails.root}/config), defaults to daemons.yml"
     
-    config_file = Rails.root + (@controller.argv["CONFIG"] || 'config/daemons.yml')
+    config_file = Rails.root + 'config' + (@controller.argv["CONFIG"] || 'daemons.yml')
     
     @config = DaemonicThreads::Config.new(config_file)
     @http = DaemonicThreads::HTTP::Server.new(self)

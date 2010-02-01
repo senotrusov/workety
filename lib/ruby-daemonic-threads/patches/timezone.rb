@@ -17,7 +17,7 @@
 # To reproduce race condition, start daemon and do concurrent HTTP get for some resource
 # ab -c 100 -n 1000 http://127.0.0.1:4000/daemon/foo_resources/7.xml
 
-# Rails default to lazy load this, so it gaves random exceptions in multithreaded env
+# This is lazy loaded by default, so it gaves random exceptions in multithreaded env
 ActiveSupport::TimeWithZone
 
 # @@loaded_zones hash must be mutexed
