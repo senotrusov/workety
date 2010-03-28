@@ -153,6 +153,7 @@ class DaemonicThreads::Base
   
   
   # Можно запускать из initialize_daemon или из любого треда
+  # TODO: cleanup on thread exit
   def spawn_thread(thread_name, *args)
     @creatures_mutex.synchronize do
       raise(DaemonicThreads::MustTerminatedState, "Unable to spawn new threads after stop() is called") if @must_terminate
@@ -272,6 +273,5 @@ class DaemonicThreads::Base
       end
     end
   end
-  
 end
 
