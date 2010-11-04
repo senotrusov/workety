@@ -13,10 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+
+
 # tzinfo is lazy loaded by default, so it gaves random exceptions in multithreaded env
 # To reproduce race condition, start daemon and do concurrent HTTP get for some resource
 # ab -c 100 -n 1000 http://127.0.0.1:4000/daemon/foo_resources/7.xml
-
 
 # TODO Watch for activesupport-3.0.1/lib/active_support/values/time_zone.rb thread safe TODO at line 320
 require 'active_support/tzinfo' unless defined?(::TZInfo)
