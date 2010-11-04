@@ -21,13 +21,11 @@
 #   On the other hand, queues tends to be quite quickly  
 
 class DaemonicThreads::Queues
-  DEFAULT_STORAGE_DIR = Rails.root + 'tmp' + 'queues'
-
   def initialize(process)
     @queues = {}
     @config = process.config.queues
 
-    @storage_dir = DEFAULT_STORAGE_DIR
+    @storage_dir = Rails.root + 'tmp' + 'queues'
   end
   
   def start
