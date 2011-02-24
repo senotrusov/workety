@@ -1,5 +1,5 @@
 
-#  Copyright 2009 Stanislav Senotrusov <senotrusov@gmail.com>
+#  Copyright 2009-2011 Stanislav Senotrusov <stan@senotrusov.com>
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,21 +18,16 @@ begin
   require 'jeweler'
   
   Jeweler::Tasks.new do |gemspec|
-    gemspec.name = "ruby-daemonic-threads"
+    gemspec.name = "ruby-threads-toolkit"
     gemspec.summary = "Create multithreaded applications with smart persistent internal queues, WEB/REST interface, exception handling and recovery"
-    gemspec.email = "senotrusov@gmail.com"
-    gemspec.homepage = "http://github.com/senotrusov/ruby-daemonic-threads"
+    gemspec.email = "stan@senotrusov.com"
+    gemspec.homepage = "http://github.com/senotrusov/ruby-threads-toolkit"
     gemspec.authors = ["Stanislav Senotrusov"]
-    
-    gemspec.add_dependency 'mongrel'
-    gemspec.add_dependency "senotrusov-ruby-toolkit"
-    gemspec.add_dependency "ruby-threading-toolkit"
-    gemspec.add_dependency "ruby-process-controller"
   end
   
   Jeweler::GemcutterTasks.new
   
 rescue LoadError
-  puts "Jeweler not available. Install it with: sudo gem install jeweler"
+  puts "Jeweler not available. Install it with: gem install jeweler"
 end
 
