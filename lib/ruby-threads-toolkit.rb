@@ -18,7 +18,28 @@ module DaemonicThreads
   class MustTerminatedState < StandardError; end
 end
 
+
+require 'thread'
+
+require 'ruby-threads-toolkit/thread-extensions/condition_variable.rb'
+require 'ruby-threads-toolkit/thread-extensions/mutexed_accessors.rb'
+require 'ruby-threads-toolkit/thread-extensions/smart_queue.rb'
+require 'ruby-threads-toolkit/thread-extensions/persistent_queue.rb'
+require 'ruby-threads-toolkit/thread-extensions/thread.rb'
+require 'ruby-threads-toolkit/thread-extensions/thread_lock.rb'
+require 'ruby-threads-toolkit/thread-extensions/threadsafe_sequence.rb'
+require 'ruby-threads-toolkit/thread-extensions/threadsafe_sequence_loop.rb'
+
+
 require 'erb'
+
+
+require 'ruby-threads-toolkit/core-extensions/exception.rb'
+require 'ruby-threads-toolkit/core-extensions/pathname.rb'
+require 'ruby-threads-toolkit/core-extensions/file.rb'
+require 'ruby-threads-toolkit/core-extensions/socket.rb'
+require 'ruby-threads-toolkit/core-extensions/accessors_generator.rb'
+
 
 require "ruby-threads-toolkit/config.rb"
 require "ruby-threads-toolkit/daemons.rb"
