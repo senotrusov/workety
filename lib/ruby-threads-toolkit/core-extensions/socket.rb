@@ -67,3 +67,4 @@ class IPSocket
   SOCKET_EXEPTIONS.push(Errno::EPROTO) if defined?(Errno::EPROTO)
   SOCKET_EXEPTIONS.push(Errno::ECOMM)  if defined?(Errno::ECOMM)
 end
+

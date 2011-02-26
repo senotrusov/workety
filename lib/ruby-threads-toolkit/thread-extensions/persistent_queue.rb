@@ -17,6 +17,9 @@
 class PersistentQueue < SmartQueue
   attr_accessor :storage
   
+  # Storage must respond to exist?(), read(), delete() and write(data)
+  # like Pathname for file-based storage 
+  
   def restore
     @mutex.synchronize do
       if @storage.exist?

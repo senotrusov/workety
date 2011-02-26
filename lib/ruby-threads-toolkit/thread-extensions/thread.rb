@@ -14,9 +14,6 @@
 #  limitations under the License.
 
 
-require 'thread'
-require 'senotrusov-ruby-toolkit'
-
 class ThreadJoinTimeoutExpiresError < Exception; end
 class ThreadTerminatedError < StandardError; end
 class ThreadNotTerminatedError < StandardError; end
