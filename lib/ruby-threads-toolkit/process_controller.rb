@@ -55,8 +55,6 @@
   # Если определён только join, но не stop, то join вызывается после завершения start.
 
 
-require 'etc'
-
 class ProcessController
   COMMANDS = %w(start stop run)
   

@@ -15,20 +15,133 @@
 #  limitations under the License.
 
 
-require File.dirname(__FILE__) + '/../config/boot'
+# rtt -e development start FooBar --foo="BAR"
 
-require "active_support"
-require "ruby-process-controller"
 
-ProcessController.new do |controller|
-  THERE_ARE_DAEMONS = true
-  RAILS_DEFAULT_LOGGER = controller.logger
+# This will load bundler 
+require File.expand_path('config/boot')
 
-  ENV["RAILS_ENV"] = controller.env
-  RAILS_ENV.replace(controller.env) if defined?(RAILS_ENV)
 
-  require RAILS_ROOT + '/config/environment'
+require 'trollop'
 
-  DaemonicThreads::Process.new(controller)
+options = Trollop::options do
+  opt :environment, "Run in environment (development/production/testing)", :type => :string
+
+  opt :user, "Run as user", :type => :string
+  opt :group, "Run as group", :type => :string
+
+  opt :log, "Logfile name (default to underscored class name)", :type => :string
+  opt :log_level, "Log level (debug, info, warn, error, fatal)", :type => :string 
+  opt :pid, "Pidfile name (default to underscored class name)", :type => :string
+  
+  stop_on_unknown
 end
+
+
+action = case ARGV.first
+  when /start/i
+    ARGV.shift
+    options[:environment] ||= "production"
+    :start
+  when /stop/i
+    ARGV.shift
+    options[:environment] ||= "production"
+    :stop
+  else
+    options[:environment] ||= "development"
+    :console
+  end
+
+unless class_name = ARGV.shift
+  Trollop::die "need class name"
+end
+
+
+ENV['RAILS_ENV'] ||= options[:environment]
+
+# This will load rails framework and define application configuration class
+require File.expand_path('config/application')
+
+pidfile = "tmp/pids/#{options[:pid] || class_name.underscore}.pid"
+
+if action == :stop
+  # do
+  exit
+end
+
+Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
+
+if action == :console
+  Rails.logger = ActiveSupport::BufferedLogger.new(STDOUT)
+  Rails.logger.level = ActiveSupport::BufferedLogger.const_get(options[:log_level].upcase) if options[:log_level]
+else
+  Rails.configuration.paths.log "log/#{options[:log] || class_name.underscore}.log"
+  Rails.configuration.log_level = options[:log_level].downcase.to_sym if options[:log_level]
+end
+
+
+# This will initialize Rails application, load all the application classes 
+require File.expand_path('config/environment')
+
+
+ActiveSupport::BufferedLogger.class_eval do
+  attr_reader :log
+end
+
+Rails.logger.auto_flushing = true
+Rails.logger.flush
+
+
+class_constant = begin
+   class_name.constantize
+  rescue NameError => exception
+    Trollop::die exception.message + ". The class you specified did not found"
+  end
+
+thread = class_constant.new
+
+
+# http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
+# http://www.ruby-forum.com/topic/110492
+if options[:user] || options[:group]
+  require 'etc'
+
+  user = options[:user] ? Etc.getpwnam(options[:user]) : Etc.getpwuid(Process.euid)
+  group = options[:group] ? Etc.getgrnam(options[:group]) : Etc.getgrgid(user.gid)
+  
+  Rails.logger.log.chown(user.uid, group.gid) if Rails.logger.respond_to?(:log) && Rails.logger.log.respond_to?(:chown)
+  
+  Process.initgroups(user.name, group.gid)
+  
+  Process::GID.change_privilege(group.gid) 
+  Process::UID.change_privilege(user.uid)
+end
+
+
+if action == :start
+  File.write pidfile, Process.pid
+  
+  # based on Reimer Behrends notes
+  # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
+
+  Process.exit!(0) if fork  # Parent exits, child continues.
+  Process.setsid            # Become session leader.
+  Process.exit!(0) if fork  # Zap session leader. See http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+      
+  File.umask 022            # Default permissions will be 644 for files and 755 for directories
+      
+  # Free file descriptors and point them somewhere sensible.
+  # STDOUT/ERR should better go to a logfile
+  STDIN.reopen "/dev/null"  
+
+  unless Rails.logger.respond_to?(:log) && (stdout_to = Rails.logger.log).kind_of?(IO)
+    stdout_to = "log/#{options[:log] || class_name.underscore}.log"
+  end
+
+  STDOUT.reopen(stdout_to)  
+  STDERR.reopen STDOUT                                      
+end
+
+
+thread.start
 
