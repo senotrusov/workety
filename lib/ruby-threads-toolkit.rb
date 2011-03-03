@@ -37,6 +37,12 @@ require 'ruby-threads-toolkit/thread-extensions/threadsafe_sequence_loop.rb'
 require "ruby-threads-toolkit/patches/tzinfo.rb" if Gem.available? "tzinfo"
 
 
+#module Rtt
+#end
+
+#require "ruby-threads-toolkit/daemon.rb"
+
+
 #module DaemonicThreads
 #  class MustTerminatedState < StandardError; end
 #end

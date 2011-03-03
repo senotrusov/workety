@@ -18,11 +18,16 @@
 # rtt -e development start FooBar --foo="BAR"
 
 
+RTT_TERM_TIMEOUT = 60
+
+
 # This will load bundler 
 require File.expand_path('config/boot')
 
 
-require 'trollop'
+#require 'ruby-threads-toolkit'
+
+#daemon = Rtt::Daemon.new
 
 options = Trollop::options do
   opt :environment, "Run in environment (development/production/testing)", :type => :string
@@ -65,8 +70,46 @@ require File.expand_path('config/application')
 pidfile = "tmp/pids/#{options[:pid] || class_name.underscore}.pid"
 
 if action == :stop
-  # do
+  if File.exists?(pidfile)
+    begin
+      pid = File.read(pidfile).to_i
+      Process.kill("TERM", pid)
+
+      begin
+        noticed = false
+        (RTT_TERM_TIMEOUT/0.05).to_i.times do |count|
+          sleep 0.05
+          Process.getpgid(pid)
+          if !noticed && count > 5/0.05
+            STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that"
+            noticed = true
+          end
+          break if STDIN.eof?
+        end
+        Process.kill("KILL", pid)
+        STDERR.puts "Sended KILL signal as process is still running after TERM"
+      rescue Errno::ESRCH
+      end
+
+    rescue Errno::ESRCH
+      STDERR.puts "ERROR: Process with pid #{pid} does not running" 
+    end
+
+    File.delete pidfile
+  else
+    STDERR.puts "ERROR: Pidfile #{pidfile} does not exists"
+  end
   exit
+end
+
+if File.exists?(pidfile)
+  begin
+    Process.getpgid(pid = File.read(pidfile).to_i)
+    STDERR.puts "ERROR: Process is already running with pid #{pid}"
+    exit 1
+  rescue Errno::ESRCH
+    STDERR.puts "WARNING: Found pidfile #{pidfile} with pid #{pid}, it may be the result of an unclean shutdown"
+  end
 end
 
 Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
@@ -90,6 +133,8 @@ end
 
 Rails.logger.auto_flushing = true
 Rails.logger.flush
+
+at_exit { Rails.logger.flush }
 
 
 class_constant = begin
@@ -118,9 +163,11 @@ if options[:user] || options[:group]
 end
 
 
+File.write pidfile, Process.pid
+at_exit { File.delete pidfile }
+
+
 if action == :start
-  File.write pidfile, Process.pid
-  
   # based on Reimer Behrends notes
   # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
 
