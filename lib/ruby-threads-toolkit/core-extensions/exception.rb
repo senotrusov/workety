@@ -1,5 +1,5 @@
 
-#  Copyright 2006-2009 Stanislav Senotrusov <senotrusov@gmail.com>
+#  Copyright 2006-2011 Stanislav Senotrusov <senotrusov@gmail.com>
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,20 +15,46 @@
 
 
 class Exception
-  def inspect_with_backtrace
-    inspect + ((bt = backtrace) && ("\n  #{bt.join("\n  ")}\n") || "")
-  end
-  
-  def log! logger, severity = :fatal, title = nil, inspect_method = :inspect_with_backtrace
-    logger.__send__(severity, "#{title} -- #{self.__send__(inspect_method)}")
-    logger.flush if logger.respond_to?(:flush)
-  rescue Exception => logger_exception
-    self.display! title, inspect_method
-    logger_exception.display! "Trying to log previous exception, another exception was raised", inspect_method
-  end
-  
-  def display! title = nil, inspect_method = :inspect_with_backtrace
-    STDERR.puts "#{title} -- #{self.__send__(inspect_method)}"
+  def logger
+    Rails.logger
   end
 
+  def log! options
+  
+    if defined?(HOPTOAD_API_KEY) && defined?(Toadhopper) && Rails.env == "production"
+      begin
+        Toadhopper(HOPTOAD_API_KEY).post!(self, options)
+      rescue Exception => hoptoad_exception
+        logger.error hoptoad_exception.details
+      end
+    end
+    
+    logger.error self.details(options)
+    
+    logger.flush if logger.respond_to?(:flush)
+    
+  rescue Exception => logging_exception
+    logging_exception.display!
+    self.display!(options)
+  end
+  
+  def display! options = {}
+    STDERR.puts details(options)
+  end
+
+  def details options = {}
+    inspect + "\n" +
+    
+    "\nOptions:\n" +
+    
+      options.keys.collect do |key|
+        PP.pp(options[key], dump = "") rescue dump = "ERROR: Can not pretty-print"
+        " #{key.inspect} => \n  " + dump.gsub("\n", "\n  ").strip + "\n" 
+      end.join("\n") +
+    
+    "\nBacktrace:\n" +
+    
+      ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
+  end
 end
+
