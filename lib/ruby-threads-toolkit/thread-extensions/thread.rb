@@ -16,12 +16,14 @@
 
 class Thread
   def details
-    inspect + "\n" +
+    "\nThread:\n" +
+    
+      " " + inspect + "\n" +
     
     "\nThread-local variables:\n" +
     
       self.keys.collect do |key|
-        PP.pp(self[key], dump = "") rescue dump = "ERROR: Can not pretty-print"
+        PP.pp(self[key], dump = "") rescue dump = options[key].inspect rescue dump = "ERROR: Can not pretty-print or inspect"
         " #{key.inspect} => \n  " + dump.gsub("\n", "\n  ").strip + "\n" 
       end.join("\n") +
     

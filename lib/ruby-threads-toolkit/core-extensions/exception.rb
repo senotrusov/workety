@@ -19,11 +19,11 @@ class Exception
     Rails.logger
   end
 
-  def log! options
+  def log! options = {}
   
     if defined?(HOPTOAD_API_KEY) && defined?(Toadhopper) && Rails.env == "production"
       begin
-        Toadhopper(HOPTOAD_API_KEY).post!(self, options)
+        Toadhopper(HOPTOAD_API_KEY).post!(self, options.dup)
       rescue Exception => hoptoad_exception
         logger.error hoptoad_exception.details
       end
@@ -39,17 +39,19 @@ class Exception
   end
   
   def display! options = {}
-    STDERR.puts details(options)
+    STDERR.write details(options) + "\n"
   end
 
   def details options = {}
-    inspect + "\n" +
+    "\nException:\n" +
+    
+    " " + inspect + "\n" +
     
     "\nOptions:\n" +
     
       options.keys.collect do |key|
-        PP.pp(options[key], dump = "") rescue dump = "ERROR: Can not pretty-print"
-        " #{key.inspect} => \n  " + dump.gsub("\n", "\n  ").strip + "\n" 
+        PP.pp(options[key], dump = "") rescue dump = options[key].inspect rescue dump = "ERROR: Can not pretty-print or inspect"
+        " #{key.inspect} => \n  " + dump.gsub("\n", "\n   ").strip + "\n" 
       end.join("\n") +
     
     "\nBacktrace:\n" +

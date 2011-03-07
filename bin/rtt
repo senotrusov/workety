@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
-# 
-#  Copyright 2009 Stanislav Senotrusov <senotrusov@gmail.com>
+#  
+#  Copyright 2009-2011 Stanislav Senotrusov <senotrusov@gmail.com>
 # 
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
 #  limitations under the License.
 
 
-# rtt -e development start FooBar --foo="BAR"
+# I encountered functions and classes once, they look strange.
+
+ 
+# bundle exec rtt -e development start Rtt::TestThread --foo=bar
+# Process.kill("TERM", Process.pid)
 
 
 RTT_TERM_TIMEOUT = 60
@@ -24,10 +28,11 @@ RTT_TERM_TIMEOUT = 60
 # This will load bundler 
 require File.expand_path('config/boot')
 
+if File.exists?(hoptoad = 'config/initializers/hoptoad.rb') && matchdata = File.read(hoptoad).match(/api_key\s*=\s*['"](.+)['"]/)
+  HOPTOAD_API_KEY = matchdata[1]
+end
 
-#require 'ruby-threads-toolkit'
-
-#daemon = Rtt::Daemon.new
+require 'trollop'
 
 options = Trollop::options do
   opt :environment, "Run in environment (development/production/testing)", :type => :string
@@ -35,9 +40,9 @@ options = Trollop::options do
   opt :user, "Run as user", :type => :string
   opt :group, "Run as group", :type => :string
 
-  opt :log, "Logfile name (default to underscored class name)", :type => :string
+  opt :log, "Logfile name (default to class_name.underscore.parameterize)", :type => :string
   opt :log_level, "Log level (debug, info, warn, error, fatal)", :type => :string 
-  opt :pid, "Pidfile name (default to underscored class name)", :type => :string
+  opt :pid, "Pidfile name (default to class_name.underscore.parameterize)", :type => :string
   
   stop_on_unknown
 end
@@ -67,58 +72,71 @@ ENV['RAILS_ENV'] ||= options[:environment]
 # This will load rails framework and define application configuration class
 require File.expand_path('config/application')
 
-pidfile = "tmp/pids/#{options[:pid] || class_name.underscore}.pid"
+
+pidfile = "tmp/pids/#{options[:pid] || class_name.underscore.parameterize}.pid"
+logfile = "log/#{options[:log] || class_name.underscore.parameterize}.log"
+
 
 if action == :stop
-  if File.exists?(pidfile)
+  begin
+    pid = File.read(pidfile).to_i
+    Process.kill("TERM", pid)
+    
     begin
-      pid = File.read(pidfile).to_i
-      Process.kill("TERM", pid)
-
-      begin
-        noticed = false
-        (RTT_TERM_TIMEOUT/0.05).to_i.times do |count|
-          sleep 0.05
-          Process.getpgid(pid)
-          if !noticed && count > 5/0.05
-            STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that"
-            noticed = true
-          end
-          break if STDIN.eof?
+      noticed = false
+      (RTT_TERM_TIMEOUT/0.05).to_i.times do |count|
+        sleep 0.05
+        Process.getpgid(pid)
+        if !noticed && count > 5/0.05
+          STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that or <Ctrl>c to cancel"
+          noticed = true
         end
-        Process.kill("KILL", pid)
-        STDERR.puts "Sended KILL signal as process is still running after TERM"
-      rescue Errno::ESRCH
+        begin
+          STDIN.read_nonblock(16)
+        rescue Errno::EAGAIN
+        rescue EOFError
+          break
+        end
       end
-
+      Process.kill("KILL", pid)
+      STDERR.puts "Sended KILL signal as process is still running after TERM"
     rescue Errno::ESRCH
-      STDERR.puts "ERROR: Process with pid #{pid} does not running" 
+    rescue Interrupt
+      Process.exit false
     end
+    
+    Process.exit true
 
-    File.delete pidfile
-  else
+  rescue Errno::ENOENT
     STDERR.puts "ERROR: Pidfile #{pidfile} does not exists"
+    Process.exit false
+  rescue Errno::ESRCH
+    STDERR.puts "ERROR: Process with pid #{pid} does not running" 
+    Process.exit false
   end
-  exit
 end
+
 
 if File.exists?(pidfile)
   begin
     Process.getpgid(pid = File.read(pidfile).to_i)
     STDERR.puts "ERROR: Process is already running with pid #{pid}"
-    exit 1
+    Process.exit false
+  rescue Errno::ENOENT
   rescue Errno::ESRCH
     STDERR.puts "WARNING: Found pidfile #{pidfile} with pid #{pid}, it may be the result of an unclean shutdown"
   end
 end
 
+
 Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
+
 
 if action == :console
   Rails.logger = ActiveSupport::BufferedLogger.new(STDOUT)
   Rails.logger.level = ActiveSupport::BufferedLogger.const_get(options[:log_level].upcase) if options[:log_level]
 else
-  Rails.configuration.paths.log "log/#{options[:log] || class_name.underscore}.log"
+  Rails.configuration.paths.log logfile
   Rails.configuration.log_level = options[:log_level].downcase.to_sym if options[:log_level]
 end
 
@@ -137,58 +155,120 @@ Rails.logger.flush
 at_exit { Rails.logger.flush }
 
 
-class_constant = begin
-   class_name.constantize
-  rescue NameError => exception
-    Trollop::die exception.message + ". The class you specified did not found"
+# Below that line prefer STDOUT.write "foo\n" instead of puts, to not mix output with logger like "foofoo\n\n"
+begin
+  
+  class_constant = begin
+     class_name.constantize
+    rescue NameError => exception
+      Trollop::die exception.message + ". The class you specified did not found"
+    end
+
+  thread = nil
+  mutex = Mutex.new
+  started = false
+  must_terminate = false
+
+
+  # If signal handler was called second time while the first is still running, mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
+  # So, instead of using mutex there are funny exception handling here and separate thread with mutex
+  term_signal_handler = Proc.new do
+    begin 
+      
+      Thread.new do
+        begin
+          mutex.synchronize do
+            unless must_terminate
+              must_terminate = true
+              thread.stop if started
+            end
+          end
+        rescue Exception => exception
+          begin
+            exception.log!
+          ensure
+            Process.exit false
+          end
+        end 
+      end
+
+    rescue Exception => exception
+      begin
+        exception.log!
+      ensure
+        Process.exit false
+      end
+    end 
   end
 
-thread = class_constant.new
+  Signal.trap('INT',  & term_signal_handler) # Ctrl+C
+  Signal.trap('TERM', & term_signal_handler) # kill
 
 
-# http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
-# http://www.ruby-forum.com/topic/110492
-if options[:user] || options[:group]
-  require 'etc'
-
-  user = options[:user] ? Etc.getpwnam(options[:user]) : Etc.getpwuid(Process.euid)
-  group = options[:group] ? Etc.getgrnam(options[:group]) : Etc.getgrgid(user.gid)
-  
-  Rails.logger.log.chown(user.uid, group.gid) if Rails.logger.respond_to?(:log) && Rails.logger.log.respond_to?(:chown)
-  
-  Process.initgroups(user.name, group.gid)
-  
-  Process::GID.change_privilege(group.gid) 
-  Process::UID.change_privilege(user.uid)
-end
-
-
-File.write pidfile, Process.pid
-at_exit { File.delete pidfile }
-
-
-if action == :start
-  # based on Reimer Behrends notes
-  # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
-
-  Process.exit!(0) if fork  # Parent exits, child continues.
-  Process.setsid            # Become session leader.
-  Process.exit!(0) if fork  # Zap session leader. See http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
-      
-  File.umask 022            # Default permissions will be 644 for files and 755 for directories
-      
-  # Free file descriptors and point them somewhere sensible.
-  # STDOUT/ERR should better go to a logfile
-  STDIN.reopen "/dev/null"  
-
-  unless Rails.logger.respond_to?(:log) && (stdout_to = Rails.logger.log).kind_of?(IO)
-    stdout_to = "log/#{options[:log] || class_name.underscore}.log"
+  mutex.synchronize do
+    Process.exit if must_terminate
+    thread = class_constant.new
   end
 
-  STDOUT.reopen(stdout_to)  
-  STDERR.reopen STDOUT                                      
+
+  # http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
+  # http://www.ruby-forum.com/topic/110492
+  if options[:user] || options[:group]
+    require 'etc'
+
+    user = options[:user] ? Etc.getpwnam(options[:user]) : Etc.getpwuid(Process.euid)
+    group = options[:group] ? Etc.getgrnam(options[:group]) : Etc.getgrgid(user.gid)
+    
+    Rails.logger.log.chown(user.uid, group.gid) if Rails.logger.respond_to?(:log) && Rails.logger.log.respond_to?(:chown)
+    
+    Process.initgroups(user.name, group.gid)
+    
+    Process::GID.change_privilege(group.gid) 
+    Process::UID.change_privilege(user.uid)
+  end
+
+  
+  if action == :start
+    # based on Reimer Behrends notes
+    # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
+
+    Process.exit!(true) if fork  # Parent exits, child continues.
+    Process.setsid               # Become session leader.
+    Process.exit!(true) if fork  # Zap session leader. See http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+    
+    # Is there any point to set umask here?
+    # File.umask 022             # Default permissions will be 644 for files and 755 for directories
+        
+    # Free file descriptors and point them somewhere sensible.
+    # STDOUT/ERR should better go to a logfile
+    STDIN.reopen "/dev/null"  
+
+    unless Rails.logger.respond_to?(:log) && (stdout_to = Rails.logger.log).kind_of?(IO)
+      stdout_to = logfile
+    end
+
+    STDOUT.reopen(stdout_to)  
+    STDERR.reopen STDOUT                                      
+  end
+
+  File.write pidfile, Process.pid
+  at_exit { File.delete pidfile }
+
+  
+  mutex.synchronize do
+    Process.exit if must_terminate
+    thread.start
+    started = true
+  end
+  
+  
+  thread.join
+  
+rescue ScriptError, StandardError => exception
+  begin
+    exception.log!
+  ensure
+    Process.exit(false)
+  end
 end
-
-
-thread.start
 

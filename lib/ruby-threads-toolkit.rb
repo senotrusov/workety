@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 
+require 'pp'
 
 require 'ruby-threads-toolkit/core-extensions/accessors_generator.rb'
 require 'ruby-threads-toolkit/core-extensions/exception.rb'
@@ -37,10 +38,10 @@ require 'ruby-threads-toolkit/thread-extensions/threadsafe_sequence_loop.rb'
 require "ruby-threads-toolkit/patches/tzinfo.rb" if Gem.available? "tzinfo"
 
 
-#module Rtt
-#end
+module Rtt
+end
 
-#require "ruby-threads-toolkit/daemon.rb"
+require "ruby-threads-toolkit/rtt/test_thread.rb"
 
 
 #module DaemonicThreads
