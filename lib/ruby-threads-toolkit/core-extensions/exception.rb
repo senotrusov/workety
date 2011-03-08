@@ -43,15 +43,19 @@ class Exception
   end
 
   def details options = {}
-    "\nException:\n" +
+
+    title = "Exception#{" " + options[:title] if options[:title]}:"
+    title = title + "\n" + ("-" * title.length) 
+
+    "\n#{title}\n" +
     
     " " + inspect + "\n" +
     
     "\nOptions:\n" +
     
       options.keys.collect do |key|
-        PP.pp(options[key], dump = "") rescue dump = options[key].inspect rescue dump = "ERROR: Can not pretty-print or inspect"
-        " #{key.inspect} => \n  " + dump.gsub("\n", "\n   ").strip + "\n" 
+        " #{key.inspect} => \n  " + 
+          (options[key].pretty_inspect rescue options[key].inspect rescue "ERROR: Can not pretty-print or inspect").gsub("\n", "\n   ").strip + "\n" 
       end.join("\n") +
     
     "\nBacktrace:\n" +

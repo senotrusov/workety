@@ -20,6 +20,7 @@ require 'ruby-threads-toolkit/core-extensions/accessors_generator.rb'
 require 'ruby-threads-toolkit/core-extensions/exception.rb'
 require 'ruby-threads-toolkit/core-extensions/file.rb'
 require 'ruby-threads-toolkit/core-extensions/pathname.rb'
+require 'ruby-threads-toolkit/core-extensions/signal.rb'
 require 'ruby-threads-toolkit/core-extensions/socket.rb'
 
 

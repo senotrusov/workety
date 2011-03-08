@@ -171,38 +171,27 @@ begin
 
 
   # If signal handler was called second time while the first is still running, mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
-  # So, instead of using mutex in the signal handler, there are funny exception handling here and the mutex in a separate thread 
-  term_signal_handler = Proc.new do
-    begin 
-      
-      Thread.new do
-        begin
-          mutex.synchronize do
-            unless must_terminate
-              must_terminate = true
-              thread.stop if started
-            end
-          end
-        rescue Exception => exception
-          begin
-            exception.log!
-          ensure
-            Process.exit false
-          end
-        end 
+  # So, there is a mutex in a separate thread and exception handling by Signal.threaded_handler 
+  term_signal_handler = Signal.threaded_handler do
+    mutex.synchronize do
+      unless must_terminate
+        must_terminate = true
+        thread.stop if started
       end
-
-    rescue Exception => exception
-      begin
-        exception.log!
-      ensure
-        Process.exit false
-      end
-    end 
+    end
   end
 
-  Signal.trap('INT',  & term_signal_handler) # Ctrl+C
-  Signal.trap('TERM', & term_signal_handler) # kill
+  Signal.trap(:INT,  & term_signal_handler) # Ctrl+C
+  Signal.trap(:TERM, & term_signal_handler) # kill
+  
+  
+  Signal.threaded_trap(:USR1) do
+    list = Thread.list
+    Rails.logger.info "Thread list: #{list.length} threads total at #{Time.now}"
+    list.each_with_index do |item, index|
+      Rails.logger.info item.details(:title => "#{index + 1} of #{list.length}")
+    end
+  end
 
 
   mutex.synchronize do
