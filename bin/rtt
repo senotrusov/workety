@@ -80,7 +80,7 @@ logfile = "log/#{options[:log] || class_name.underscore.parameterize}.log"
 if action == :stop
   begin
     pid = File.read(pidfile).to_i
-    Process.kill("TERM", pid)
+    Process.kill(:TERM, pid)
     
     begin
       noticed = false
@@ -88,6 +88,8 @@ if action == :stop
         sleep 0.05
         Process.getpgid(pid)
         if !noticed && count > 5/0.05
+          STDOUT.puts "Sending USR1 signal to dump list of running threads"
+          Process.kill(:USR1, pid)
           STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that or <Ctrl>c to cancel"
           noticed = true
         end
@@ -98,7 +100,7 @@ if action == :stop
           break
         end
       end
-      Process.kill("KILL", pid)
+      Process.kill(:KILL, pid)
       STDERR.puts "Sended KILL signal as process is still running after TERM"
     rescue Errno::ESRCH
     rescue Interrupt
