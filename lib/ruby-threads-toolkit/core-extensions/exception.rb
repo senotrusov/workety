@@ -14,33 +14,40 @@
 #  limitations under the License.
 
 
+require 'toadhopper'
+
 class Exception
   def logger
     Rails.logger
   end
+  
 
   def log! options = {}
-  
-    if defined?(HOPTOAD_API_KEY) && defined?(Toadhopper) && Rails.env == "production"
-      begin
-        Toadhopper(HOPTOAD_API_KEY).post!(self, options.dup)
-      rescue Exception => hoptoad_exception
-        logger.error hoptoad_exception.details
-      end
-    end
+    post_to_tracker! options
     
     logger.error self.details(options)
     
     logger.flush if logger.respond_to?(:flush)
     
-  rescue Exception => logging_exception
+  rescue ScriptError, StandardError => logging_exception
     logging_exception.display!
     self.display!(options)
   end
   
+  
+  def post_to_tracker! options = {}
+    if defined?(HoptoadNotifier) && (api_key = HoptoadNotifier.configuration.api_key) && Rails.env == "production"
+      Toadhopper(api_key).post!(self, options.dup)
+    end
+  rescue ScriptError, StandardError => exception
+    logger.error exception.details
+  end
+  
+  
   def display! options = {}
     STDERR.write details(options) + "\n"
   end
+  
 
   def details options = {}
 

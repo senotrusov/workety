@@ -24,7 +24,7 @@ module Signal
         Thread.new do
           begin
             yield
-          rescue Exception => exception
+          rescue ScriptError, StandardError => exception
             begin
               exception.log!
             ensure
@@ -33,7 +33,7 @@ module Signal
           end 
         end
 
-      rescue Exception => exception
+      rescue ScriptError, StandardError => exception
         begin
           exception.log!
         ensure

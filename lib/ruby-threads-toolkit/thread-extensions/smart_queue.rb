@@ -105,10 +105,10 @@ class SmartQueue
     if block_given? && result
       begin
         yield(result)
-      rescue Exception => exception
+      rescue Exception => exception # TODO
         begin
           self.push(result, false)
-        rescue Exception => handler_exception
+        rescue Exception => handler_exception # TODO
           handler_exception.log!(Rails.logger, :fatal, "#{self.class} shift rollback")
         ensure
           raise exception
@@ -154,10 +154,10 @@ class SmartQueue
     if block_given? && result.length
       begin
         yield(result)
-      rescue Exception => exception
+      rescue Exception => exception # TODO
         begin
           self.concat(result, false)
-        rescue Exception => handler_exception
+        rescue Exception => handler_exception # TODO
           handler_exception.log!(Rails.logger, :fatal, "#{self.class} flush rollback")
         ensure
           raise exception

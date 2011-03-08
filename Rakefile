@@ -24,7 +24,8 @@ begin
     gemspec.homepage = "http://github.com/senotrusov/ruby-threads-toolkit"
     gemspec.authors = ["Stanislav Senotrusov"]
     
-    gemspec.add_dependency "trollop"
+    gemspec.add_dependency 'trollop'
+    gemspec.add_dependency 'toadhopper'
   end
   
   Jeweler::GemcutterTasks.new

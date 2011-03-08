@@ -28,9 +28,6 @@ RTT_TERM_TIMEOUT = 60
 # This will load bundler 
 require File.expand_path('config/boot')
 
-if File.exists?(hoptoad = 'config/initializers/hoptoad.rb') && matchdata = File.read(hoptoad).match(/api_key\s*=\s*['"](.+)['"]/)
-  HOPTOAD_API_KEY = matchdata[1]
-end
 
 require 'trollop'
 
