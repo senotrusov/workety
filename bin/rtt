@@ -171,7 +171,7 @@ begin
 
 
   # If signal handler was called second time while the first is still running, mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
-  # So, instead of using mutex in signal handler there are funny exception handling here and mutex in a separate thread 
+  # So, instead of using mutex in signal handler there are funny exception handling here and the mutex in a separate thread 
   term_signal_handler = Proc.new do
     begin 
       
