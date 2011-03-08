@@ -44,7 +44,7 @@ class Exception
 
   def details options = {}
 
-    title = "Exception#{" " + options[:title] if options[:title]}:"
+    title = "Exception#{" " + options[:title] if options[:title]}"
     title = title + "\n" + ("-" * title.length) 
 
     "\n#{title}\n" +

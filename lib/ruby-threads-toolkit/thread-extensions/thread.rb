@@ -17,7 +17,7 @@
 class Thread
   def details options = {}
 
-    title = "Thread#{" " + options[:title] if options[:title]}:"
+    title = "Thread#{" " + options[:title] if options[:title]}"
     title = title + "\n" + ("-" * title.length) 
 
     "\n#{title}\n" +
