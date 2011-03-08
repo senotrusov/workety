@@ -94,7 +94,7 @@ if action == :stop
           noticed = true
         end
         begin
-          STDIN.read_nonblock(16)
+          STDIN.read_nonblock(1024)
         rescue Errno::EAGAIN
         rescue EOFError
           break
