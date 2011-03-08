@@ -19,7 +19,7 @@
 
  
 # bundle exec rtt -e development start Rtt::TestThread --foo=bar
-# Process.kill("TERM", Process.pid)
+# Process.kill(:TERM, Process.pid)
 
 
 RTT_TERM_TIMEOUT = 60
@@ -88,8 +88,8 @@ if action == :stop
         sleep 0.05
         Process.getpgid(pid)
         if !noticed && count > 5/0.05
-          STDOUT.puts "Sending USR1 signal to dump list of running threads"
           Process.kill(:USR1, pid)
+          STDOUT.puts "Sended USR1 signal to log list of running threads"
           STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that or <Ctrl>c to cancel"
           noticed = true
         end
