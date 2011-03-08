@@ -23,6 +23,8 @@ begin
     gemspec.email = "stan@senotrusov.com"
     gemspec.homepage = "http://github.com/senotrusov/ruby-threads-toolkit"
     gemspec.authors = ["Stanislav Senotrusov"]
+    
+    gemspec.add_dependency "trollop"
   end
   
   Jeweler::GemcutterTasks.new
