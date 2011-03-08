@@ -1,6 +1,8 @@
 
 module Signal
-  def self.threaded_handler(exit_on_error = true)
+  def self.threaded_handler(options = {})
+    options[:exit_on_error] = true unless options.has_key? :exit_on_error
+    
     Proc.new do
       begin 
         
@@ -11,7 +13,7 @@ module Signal
             begin
               exception.log!
             ensure
-              Process.exit(false) if exit_on_error
+              Process.exit(false) if options[:exit_on_error]
             end
           end 
         end
@@ -20,14 +22,14 @@ module Signal
         begin
           exception.log!
         ensure
-          Process.exit(false) if exit_on_error
+          Process.exit(false) if options[:exit_on_error]
         end
       end 
     end
   end
   
-  def self.threaded_trap(signal, exit_on_error = true, & block)
-    trap(signal, & threaded_handler(exit_on_error, & block))
+  def self.threaded_trap(signal, options = {}, & block)
+    trap(signal, & threaded_handler(options, & block))
   end
 end
 

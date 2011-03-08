@@ -185,7 +185,7 @@ begin
   Signal.trap(:TERM, & term_signal_handler) # kill
   
   
-  Signal.threaded_trap(:USR1) do
+  Signal.threaded_trap(:USR1, :exit_on_error => false) do
     list = Thread.list
     Rails.logger.info "Thread list: #{list.length} threads total at #{Time.now}"
     list.each_with_index do |item, index|
