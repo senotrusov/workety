@@ -231,11 +231,12 @@ begin
     # STDOUT/ERR should better go to a logfile
     STDIN.reopen "/dev/null"  
 
-    unless Rails.logger.respond_to?(:log) && (stdout_to = Rails.logger.log).kind_of?(IO)
-      stdout_to = logfile
-    end
-
-    STDOUT.reopen(stdout_to)  
+    if Rails.logger.respond_to?(:log) && Rails.logger.log.kind_of?(IO)
+      STDOUT.reopen(Rails.logger.log)
+    else
+      STDOUT.reopen(logfile, "a")
+    else
+    
     STDERR.reopen STDOUT                                      
   end
 

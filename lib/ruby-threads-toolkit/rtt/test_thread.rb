@@ -14,10 +14,12 @@
 #  limitations under the License.
 
 class Rtt::TestThread
+  # Before dropping privileges 
   def initialize
     STDOUT.write "#{self.class} init, pid #{Process.pid}\n"
   end
   
+  # After changing privileges to some user/group
   def start
     STDOUT.write "#{self.class} start, pid #{Process.pid}\n"
 
