@@ -36,7 +36,7 @@ class Exception
   
   
   def post_to_tracker! options = {}
-    if defined?(HoptoadNotifier) && (api_key = HoptoadNotifier.configuration.api_key) && Rails.env == "production"
+    if Rails.env == "production" && defined?(HoptoadNotifier) && HoptoadNotifier.configuration && (api_key = HoptoadNotifier.configuration.api_key) 
       Toadhopper(api_key).post!(self, options.dup)
     end
   rescue ScriptError, StandardError => exception

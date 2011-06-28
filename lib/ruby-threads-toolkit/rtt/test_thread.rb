@@ -29,9 +29,10 @@ class Rtt::TestThread
     STDERR.write "STDERR test\n"
 
     @t = Thread.new do
-      STDOUT.write "#{self.class} sleep\n"
-      sleep 30
-      STDOUT.write "#{self.class} done sleep\n"
+      600.times do |t|
+        STDOUT.write "#{self.class} Doing #{t}\n"
+        sleep 1
+      end
     end
     
 #    1000.times do 

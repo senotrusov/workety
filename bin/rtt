@@ -15,20 +15,14 @@
 #  limitations under the License.
 
 
-# I encountered functions and classes once, they look strange.
+# I encountered functions and classes once. They look strange.
 
  
-# bundle exec rtt -e development start Rtt::TestThread --foo=bar
-# Process.kill(:TERM, Process.pid)
-
-
-RTT_TERM_TIMEOUT = 60
-
-
-# This will load bundler 
-require File.expand_path('config/boot')
-
-
+# Parse command-line arguments
+#
+# rtt -e development start Rtt::TestThread --foo=bar
+#     ^^^^^^^^^^^^^^ Options for RTT       ^^^^^^^^^ Options for class (parsed by class)
+#
 require 'trollop'
 
 options = Trollop::options do
@@ -37,13 +31,15 @@ options = Trollop::options do
   opt :user, "Run as user", :type => :string
   opt :group, "Run as group", :type => :string
 
-  opt :log, "Logfile name (default to class_name.underscore.parameterize)", :type => :string
+  opt :name, "Logfile and pidfile name", :type => :string
+  opt :log, "Logfile name (default to class_name)", :type => :string
   opt :log_level, "Log level (debug, info, warn, error, fatal)", :type => :string 
-  opt :pid, "Pidfile name (default to class_name.underscore.parameterize)", :type => :string
+  opt :pid, "Pidfile name (default to class_name)", :type => :string
+  
+  opt :no_watchdog, "Do not watch and restart daemon", :type => :boolean
   
   stop_on_unknown
 end
-
 
 action = case ARGV.first
   when /start/i
@@ -59,20 +55,25 @@ action = case ARGV.first
     :console
   end
 
+ENV['RAILS_ENV'] ||= options[:environment]
+
 unless class_name = ARGV.shift
   Trollop::die "need class name"
 end
 
 
-ENV['RAILS_ENV'] ||= options[:environment]
+# Define pid and log file name
+# 
+pidfile = "tmp/pids/#{options[:name] || options[:pid] || class_name}.pid"
+logfile = "log/#{options[:name] || options[:log] || class_name}.log"
 
-# This will load rails framework and define application configuration class
-require File.expand_path('config/application')
 
-
-pidfile = "tmp/pids/#{options[:pid] || class_name.underscore.parameterize}.pid"
-logfile = "log/#{options[:log] || class_name.underscore.parameterize}.log"
-
+# Do stop action and exit
+#
+RTT_STOP_TICK = 0.05
+RTT_STOP_NOTICE = 5
+RTT_STOP_WARNING = 55
+RTT_STOP_KILL = 60
 
 if action == :stop
   begin
@@ -80,35 +81,75 @@ if action == :stop
     Process.kill(:TERM, pid)
     
     begin
-      noticed = false
-      (RTT_TERM_TIMEOUT/0.05).to_i.times do |count|
-        sleep 0.05
-        Process.getpgid(pid)
-        if !noticed && count > 5/0.05
+      noticd = false
+      warned = false
+      killed = false
+      forced = false
+      
+      slept = 0
+      
+      while Process.getpgid(pid) # Raise Errno::ESRCH if process not found
+        
+        sleep RTT_STOP_TICK
+        slept += RTT_STOP_TICK
+        
+        # Notice the operator and send USR1 signal to log running threads
+        if !noticd && slept >= RTT_STOP_NOTICE
+          STDOUT.puts "\n#{RTT_STOP_NOTICE} seconds notice timeout reached"
+          
+          STDOUT.puts "\nSending USR1 signal to log list of running threads"
           Process.kill(:USR1, pid)
-          STDOUT.puts "Sended USR1 signal to log list of running threads"
-          STDOUT.puts "KILL signal will be sent in #{RTT_TERM_TIMEOUT} seconds due the lack of response to TERM, press <Ctrl>d to force that or <Ctrl>c to cancel"
-          noticed = true
-        end
-        begin
-          STDIN.read_nonblock(1024)
-        rescue Errno::EAGAIN
-        rescue EOFError
-          break
-        end
-      end
-      Process.kill(:KILL, pid)
-      STDERR.puts "Sended KILL signal as process is still running after TERM"
-    rescue Errno::ESRCH
-    rescue Interrupt
-      Process.exit false
-    end
-    
-    Process.exit true
+          
+          STDOUT.puts "USR2 as a warning signal will be sent after #{RTT_STOP_WARNING} seconds from the first TERM"
+          STDOUT.puts "KILL signal will be sent after #{RTT_STOP_KILL} seconds from the first TERM"
+          
+          STDOUT.puts "\nPress <Ctrl>c to cancel or <Ctrl>d to force USR2 signal and the following KILL signal within #{RTT_STOP_KILL - RTT_STOP_WARNING} seconds"
 
+          noticd = true
+        end
+        
+        # Send USR2 as a warning
+        if !warned && slept >= RTT_STOP_WARNING
+          STDOUT.puts "\nSending USR2 signal as a warning before KILL"
+          Process.kill(:USR2, pid)
+          warned = true
+        end
+        
+        # Send KILL
+        if !killed && slept >= RTT_STOP_KILL
+          STDOUT.puts "\nSending KILL signal"
+          Process.kill(:KILL, pid)
+          killed = true
+        end
+        
+        # Check for <Ctrl>d
+        if !forced && slept < RTT_STOP_WARNING
+          begin
+            STDIN.read_nonblock(100)
+          rescue Errno::EAGAIN
+            # Resource temporarily unavailable - it's ok, retrying
+          rescue EOFError
+            # Operator pressed <Ctrl>d
+            forced = true
+            slept = RTT_STOP_WARNING
+          end
+        end
+        
+      end # while
+      
+    rescue Errno::ESRCH
+      STDOUT.puts "Shutdown successfull"
+      Process.exit true
+
+    rescue Interrupt
+      # Operator pressed <Ctrl>c and cancels force shutdown
+      Process.exit false 
+    end
+  
   rescue Errno::ENOENT
     STDERR.puts "ERROR: Pidfile #{pidfile} does not exists"
     Process.exit false
+
   rescue Errno::ESRCH
     STDERR.puts "ERROR: Process with pid #{pid} does not running" 
     Process.exit false
@@ -116,20 +157,114 @@ if action == :stop
 end
 
 
+# Detach from terminal when running as daemon (start action)
+#
+if action == :start
+  # based on Reimer Behrends notes
+  # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
+  Process.exit!(true) if fork  # Parent exits, child continues.
+  Process.setsid               # Become session leader.
+  Process.exit!(true) if fork  # Zap session leader. See http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+  
+  # Is there any point to set umask here?
+  # File.umask 022             # Default permissions will be 644 for files and 755 for directories
+  
+  STDIN.reopen "/dev/null"
+
+  STDOUT.reopen(logfile, "a")
+  STDOUT.sync = true
+
+  STDERR.reopen STDOUT
+end
+
+
+# Check - are process is already running?
+#
 if File.exists?(pidfile)
   begin
     Process.getpgid(pid = File.read(pidfile).to_i)
-    STDERR.puts "ERROR: Process is already running with pid #{pid}"
+    STDERR.write "ERROR: Process is already running with pid #{pid}\n"
     Process.exit false
   rescue Errno::ENOENT
+    # Do nothing
   rescue Errno::ESRCH
-    STDERR.puts "WARNING: Found pidfile #{pidfile} with pid #{pid}, it may be the result of an unclean shutdown"
+    STDERR.write "WARNING: Found pidfile #{pidfile} with pid #{pid}, it may be the result of an unclean shutdown\n"
   end
 end
 
 
-Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
+# Write pid to file
+#
+File.open(pidfile, 'w') do |file|
+  file.write Process.pid
+end
 
+delete_pidfile = true
+at_exit { File.delete(pidfile) if delete_pidfile}
+
+
+# Watchdog process if needed
+#
+
+module Signal
+  def self.propagate(pid, signal, out_signal = nil)
+    out_signal ||= signal
+    trap(signal) do
+      begin
+        yield if block_given?
+        Process.kill(out_signal, pid)
+      rescue Errno::ESRCH
+        # Process with pid #{pid} does not running
+      end
+    end
+  end
+end
+
+RTT_RESTART_DELAY = 5
+
+if action == :start && !options[:no_watchdog]
+
+  must_terminate = false
+  loop do
+    if (child_pid = fork)
+      Signal.propagate(child_pid, :INT)  { must_terminate = true }
+      Signal.propagate(child_pid, :TERM) { must_terminate = true }
+      Signal.propagate(child_pid, :USR1)
+      Signal.propagate(child_pid, :USR2, :KILL) { must_terminate = true }
+      
+      Process.wait(child_pid)
+      
+      STDOUT.write "Child #{child_pid} exited " + 
+        ($?.exited? ? "normally with status #{$?.exitstatus}" : "abnormally") +
+        ($?.signaled? ? " because of an uncaught signal #{$?.termsig}" : "") +
+        ($?.coredump? ? " and coredump" : "") + "\n"
+
+      if must_terminate || $?.exitstatus == 0
+        STDOUT.write "Terminating\n"
+        Process.exit(true)
+      end  
+
+      Signal.trap(:INT,  "DEFAULT")
+      Signal.trap(:TERM, "DEFAULT")
+      Signal.trap(:USR1, "IGNORE")
+      Signal.trap(:USR2, "DEFAULT")
+    else
+      delete_pidfile = false
+      break
+    end
+
+    STDOUT.write "Restarting after #{RTT_RESTART_DELAY} seconds\n"
+    sleep RTT_RESTART_DELAY
+  end
+end
+
+  
+# Load bundler, rails framework, rails application, initialize logger
+#
+# This will load bundler, rails framework and define application configuration class
+require File.expand_path('config/application')
+
+Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
 
 if action == :console
   Rails.logger = ActiveSupport::BufferedLogger.new(STDOUT)
@@ -139,14 +274,15 @@ else
   Rails.configuration.log_level = options[:log_level].downcase.to_sym if options[:log_level]
 end
 
+ActiveSupport::BufferedLogger.class_eval do
+  def chown_logfile(user_uid, group_gid)
+    @log.chown(user_uid, group_gid) if @log.respond_to?(:chown)
+  end
+end
 
 # This will initialize Rails application, load all the application classes 
 require File.expand_path('config/environment')
 
-
-ActiveSupport::BufferedLogger.class_eval do
-  attr_reader :log
-end
 
 Rails.logger.auto_flushing = true
 Rails.logger.flush
@@ -154,24 +290,22 @@ Rails.logger.flush
 at_exit { Rails.logger.flush }
 
 
+# Initialize, start, stop and join worker class
+# Drop process privileges after initialize
+# Signal handling and watchdog for parent
+#
 # Below that line prefer STDOUT.write "foo\n" instead of puts, to not mix output with logger like "foofoo\n\n"
+#
 begin
-  
-  class_constant = begin
-     class_name.constantize
-    rescue NameError => exception
-      Trollop::die exception.message + ". The class you specified did not found"
-    end
-
   thread = nil
   mutex = Mutex.new
   started = false
   must_terminate = false
-
-
-  # If signal handler was called second time while the first is still running, mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
-  # So, there is a mutex in a separate thread and exception handling by Signal.threaded_handler 
-  term_signal_handler = Signal.threaded_handler do
+  
+  
+  # A block to call to thread to stop
+  #
+  stop_action = Proc.new do
     mutex.synchronize do
       unless must_terminate
         must_terminate = true
@@ -179,11 +313,22 @@ begin
       end
     end
   end
-
-  Signal.trap(:INT,  & term_signal_handler) # Ctrl+C
-  Signal.trap(:TERM, & term_signal_handler) # kill
   
   
+  # Handling stop signals
+  # 
+  # If signal handler was called second time while the first is still running,
+  # then mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
+  # as all handling occurs in main thread. To avoid that signal handler spawns new thread
+  # thich taka care of stoping the process 
+  #
+  Signal.threaded_trap(:INT, & stop_action)  # Ctrl+C
+  Signal.threaded_trap(:TERM, & stop_action) # kill
+  Signal.trap(:USR2, "IGNORE") # USR2 signal used as a warning before KILL signal
+  
+  
+  # USR1 signal to display list of running thread and their backtraces
+  #
   Signal.threaded_trap(:USR1, :exit_on_error => false) do
     list = Thread.list
     Rails.logger.info "Thread list: #{list.length} threads total at #{Time.now}"
@@ -192,66 +337,71 @@ begin
     end
   end
 
+  
+  # Watchdog thread will exist process if parent process is gone
+  #
+  if action == :start && !options[:no_watchdog]
+    Thread.new do
+      begin
+        sleep 30 until Process.ppid == 1
+        Rails.logger.fatal "Parent process is missing, terminating"
+        stop_action.call
+      rescue ScriptError, StandardError => exception
+        begin
+          exception.log!
+        ensure
+          Process.exit(false)
+        end
+      end 
+    end
+  end
 
+  
+  # Instantiate class.
+  # If there is some thing to do as root (like listening for 80 port) class initialize is the place to do it.
+  #
   mutex.synchronize do
-    Process.exit if must_terminate
-    thread = class_constant.new
+    Process.exit(true) if must_terminate
+    thread = begin
+        class_name.constantize
+      rescue NameError => exception
+        exception.log!
+        Trollop::die exception.message + ". The class you specified did not found"
+      end.new
   end
 
 
+  # Drop privilegies and chown logfile
+  #
   # http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
   # http://www.ruby-forum.com/topic/110492
+  #
   if options[:user] || options[:group]
     require 'etc'
 
     user = options[:user] ? Etc.getpwnam(options[:user]) : Etc.getpwuid(Process.euid)
     group = options[:group] ? Etc.getgrnam(options[:group]) : Etc.getgrgid(user.gid)
     
-    Rails.logger.log.chown(user.uid, group.gid) if Rails.logger.respond_to?(:log) && Rails.logger.log.respond_to?(:chown)
+    Rails.logger.chown_logfile(user.uid, group.gid) if Rails.logger.respond_to?(:chown_logfile)
     
     Process.initgroups(user.name, group.gid)
     
     Process::GID.change_privilege(group.gid) 
     Process::UID.change_privilege(user.uid)
   end
-
   
-  if action == :start
-    # based on Reimer Behrends notes
-    # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/87467
-
-    Process.exit!(0) if fork  # Parent exits, child continues.
-    Process.setsid            # Become session leader.
-    Process.exit!(0) if fork  # Zap session leader. See http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
-    
-    # Is there any point to set umask here?
-    # File.umask 022          # Default permissions will be 644 for files and 755 for directories
-        
-    # Free file descriptors and point them somewhere sensible.
-    # STDOUT/ERR should better go to a logfile
-    STDIN.reopen "/dev/null"  
-
-    if Rails.logger.respond_to?(:log) && Rails.logger.log.kind_of?(IO)
-      STDOUT.reopen(Rails.logger.log)
-    else
-      STDOUT.reopen(logfile, "a")
-    else
-    
-    STDERR.reopen STDOUT                                      
-  end
-
-  File.write pidfile, Process.pid
-  at_exit { File.delete pidfile }
-
-  
+ 
+  # Invoke .start
   mutex.synchronize do
-    Process.exit if must_terminate
+    Process.exit(true) if must_terminate
     thread.start
     started = true
   end
   
   
+  # Join
   thread.join
+  
   
 rescue ScriptError, StandardError => exception
   begin
