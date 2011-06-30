@@ -17,7 +17,7 @@
 
 # I encountered functions and classes once. They look strange.
 
- 
+
 # Parse command-line arguments
 #
 # rtt -e development start Rtt::TestThread --foo=bar
@@ -156,6 +156,12 @@ if action == :stop
     Process.exit false
   end
 end
+
+
+# Below that line prefer STDOUT.write "foo\n" instead of puts
+#
+# Current ruby puts implementation make two write syscals - one for string and one (if needed) for record separator (a newline).
+# When writing to file (logfile on our case) concurrently it may intermix strings with separators like "ab\n\n".
 
 
 # Detach from terminal when running as a daemon (start action)
@@ -300,8 +306,6 @@ at_exit { Rails.logger.flush }
 # Initialize, start, stop and join worker class
 # Drop process privileges after initialize
 # Signal handling and watchdog for parent
-#
-# Below that line prefer STDOUT.write "foo\n" instead of puts, to not mix output with logger like "foofoo\n\n"
 #
 begin
   thread = nil
