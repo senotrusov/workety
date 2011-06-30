@@ -21,7 +21,12 @@
 # Parse command-line arguments
 #
 # rtt -e development start Rtt::TestThread --foo=bar
+#                    ^^^^^ Start as daemon 
 #     ^^^^^^^^^^^^^^ Options for RTT       ^^^^^^^^^ Options for class (parsed by class)
+#
+#
+# rtt Rtt::TestThread
+#   Runs test thread in console 
 #
 require 'trollop'
 
@@ -301,6 +306,10 @@ Rails.logger.auto_flushing = true
 Rails.logger.flush
 
 at_exit { Rails.logger.flush }
+
+
+# There is a need to reseed random number generators after each fork.
+# Fortunately, ruby developers already do this for us, as I get from http://redmine.ruby-lang.org/issues/4579
 
 
 # Initialize, start, stop and join worker class
