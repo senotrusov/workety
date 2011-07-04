@@ -316,6 +316,9 @@ at_exit { Rails.logger.flush }
 # Drop process privileges after initialize
 # Signal handling and watchdog for parent
 #
+# initialize() then start()
+# There is no strict order for stop and join - stop may be called before join 
+#
 begin
   thread = nil
   mutex = Mutex.new
@@ -349,7 +352,7 @@ begin
   
   # USR1 signal to display list of running thread and their backtraces
   #
-  Signal.threaded_trap(:USR1, :exit_on_error => false) do
+  Signal.threaded_trap(:USR1) do
     list = Thread.list
     Rails.logger.info "Thread list: #{list.length} threads total at #{Time.now}"
     list.each_with_index do |item, index|

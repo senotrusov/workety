@@ -14,38 +14,9 @@
 #  limitations under the License.
 
 
-#  Демон - экземпляр некоторого класса, запущенный в процессе.
-#  В одном процессе параллельно могут быть запущено произвольное число демонов. 
-#
-#  Исключение из initialize() останавливает весь процесс, потому что непонятно - как и что там запустилось и будут ли теперь работать корректно start и join.
-#
-#  Как правило, initialize() не переопределяется, а для запуска тредов, поддемонов, сетевых подключение используется initialize_daemon().
-#
-#  initialize_daemon() более толерантен к ошибкам.
-#  Исключение из группы IPSocket::SOCKET_EXEPTIONS полученное из initialize_daemon() перестартовывает демон.
-#  Тем не менее, остальные исключения, полученные из initialize_daemon() останавливают весь процесс
-#
-#  Исключения, полученные из тредов, перестартовывает демон.
-#
-#  После отработки initialize в произвольной последовательности вызываются join() и stop().
-#  join() и stop() вызывается только один раз. 
-#  Исключение в stop() останавливает весь процесс, потому что непонятно - всему ли была доведена команда остановиться.
-#  Исключение в join() останавливает весь процесс, потому что непонятно - всё ли остановилось.
-#
-#  Таким образом, реализуется несколько боязливая стратегия работы - если что-то идёт не так, процесс останавливается.
-#  Рестарт демонов происходит только когда ошибка понятна, и она, скорее всего, не приводит к фатальным последствиям.
-#  Такой ошибкой является сбой сети.
-#  Если в ваших демонах есть другие понятные вам ошибки - ловити их сами или декларируйте в restart_on_exceptions.
-#
-#  Если тред запустит самостоятельно демона, то он может получить из этого демона exception.
-#  Если этот exception не относится к категории тех, которые решаются перезапуском демона, то весь процесс останавливается.
-#  На самом деле, когда вы получаете такой exception из spawn_daemon @runner.process.controller.stop уже выполнен. Вот-вот всё закроется.
-
-
-#  Вывод inspect очень большой, потому что он долго ходит по перекрёсным ссылкам.
-#  Сюрпризом будет то, что обычный exception no method error, message которого выполняет internaly some kind of inspect,
-#  может выполнятся секунду-другую, если exception случился паралельно.  
-
+# Atomic opperation
+# http://stackoverflow.com/questions/737110/is-double-checked-locking-safe-in-ruby
+# I don't think he is right
 
 class DaemonicThreads::Base
   class_inheritable_array :restart_on_exceptions
@@ -230,48 +201,6 @@ class DaemonicThreads::Base
   
   def log severity, message = nil
     @logger.__send__(severity) {"#{self.class}##{caller.first.match(/`(.*)'/)[1]} -- #{block_given? ? yield : message}"}
-  end
-  
-  def every(duration)
-    mutex = Mutex.new
-    condition = ConditionVariable.new
-    thread_title = "every #{duration.inspect} timer"
-    duration = duration.value if duration.is_a?(ActiveSupport::Duration)
-    
-    @periodics_mutex.synchronize do
-      return if must_terminate?
-      @periodics.push [mutex, condition]
-    end
-    
-    thread_args = [Proc.new { @process.controller.stop }, @logger, :fatal, "#{self.class}#every @name:`#{@name}'"]
-
-    begin
-      mutex.synchronize do
-        until must_terminate?
-          yield
-          ActiveRecord::Base.clear_active_connections! if duration >= 60
-          
-          spawn_untracked_thread(thread_title) do
-            sleep duration
-            mutex.synchronize { condition.signal }
-          end
-           
-          condition.wait(mutex)
-        end
-      end
-    ensure
-      @periodics_mutex.synchronize do
-        @periodics.delete [mutex, condition]
-      end
-    end
-  end
-  
-  def stop_periodics
-    @periodics_mutex.synchronize do
-      @periodics.each do |mutex, condition|
-        mutex.synchronize { condition.signal }
-      end
-    end
   end
 end
 
