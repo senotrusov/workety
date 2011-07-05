@@ -20,12 +20,12 @@
 
 # Parse command-line arguments
 #
-# rtt -e development start Rtt::TestThread --foo=bar
-#                    ^^^^^ Start as daemon 
-#     ^^^^^^^^^^^^^^ Options for RTT       ^^^^^^^^^ Options for class (parsed by class)
+# workety -e development start Workety::TestThread --foo=bar
+#                        ^^^^^ Start as daemon 
+#         ^^^^^^^^^^^^^^ Options for Workety       ^^^^^^^^^ Options for class (parsed by class)
 #
 #
-# rtt Rtt::TestThread
+# workety Workety::TestThread
 #   Runs test thread in console 
 #
 require 'trollop'
@@ -75,10 +75,10 @@ logfile = "log/#{options[:name] || options[:log] || class_name}.log"
 
 # Do stop action and exit
 #
-RTT_STOP_TICK = 0.05
-RTT_STOP_NOTICE = 5
-RTT_STOP_WARNING = 55
-RTT_STOP_KILL = 60
+WORKETY_STOP_TICK = 0.05
+WORKETY_STOP_NOTICE = 5
+WORKETY_STOP_WARNING = 55
+WORKETY_STOP_KILL = 60
 
 if action == :stop
   begin
@@ -95,40 +95,40 @@ if action == :stop
       
       while Process.getpgid(pid) # Raise Errno::ESRCH if process not found
         
-        sleep RTT_STOP_TICK
-        slept += RTT_STOP_TICK
+        sleep WORKETY_STOP_TICK
+        slept += WORKETY_STOP_TICK
         
         # Notice the operator and send USR1 signal to log running threads
-        if !noticd && slept >= RTT_STOP_NOTICE
-          STDOUT.puts "\n#{RTT_STOP_NOTICE} seconds notice timeout reached"
+        if !noticd && slept >= WORKETY_STOP_NOTICE
+          STDOUT.puts "\n#{WORKETY_STOP_NOTICE} seconds notice timeout reached"
           
           STDOUT.puts "\nSending USR1 signal to log list of running threads"
           Process.kill(:USR1, pid)
           
-          STDOUT.puts "USR2 as a warning signal will be sent after #{RTT_STOP_WARNING} seconds from the first TERM"
-          STDOUT.puts "KILL signal will be sent after #{RTT_STOP_KILL} seconds from the first TERM"
+          STDOUT.puts "USR2 as a warning signal will be sent after #{WORKETY_STOP_WARNING} seconds from the first TERM"
+          STDOUT.puts "KILL signal will be sent after #{WORKETY_STOP_KILL} seconds from the first TERM"
           
-          STDOUT.puts "\nPress <Ctrl>c to cancel or <Ctrl>d to force USR2 signal and the following KILL signal within #{RTT_STOP_KILL - RTT_STOP_WARNING} seconds"
+          STDOUT.puts "\nPress <Ctrl>c to cancel or <Ctrl>d to force USR2 signal and the following KILL signal within #{WORKETY_STOP_KILL - WORKETY_STOP_WARNING} seconds"
 
           noticd = true
         end
         
         # Send USR2 as a warning
-        if !warned && slept >= RTT_STOP_WARNING
+        if !warned && slept >= WORKETY_STOP_WARNING
           STDOUT.puts "\nSending USR2 signal as a warning before KILL"
           Process.kill(:USR2, pid)
           warned = true
         end
         
         # Send KILL
-        if !killed && slept >= RTT_STOP_KILL
+        if !killed && slept >= WORKETY_STOP_KILL
           STDOUT.puts "\nSending KILL signal"
           Process.kill(:KILL, pid)
           killed = true
         end
         
         # Check for <Ctrl>d
-        if !forced && slept < RTT_STOP_WARNING
+        if !forced && slept < WORKETY_STOP_WARNING
           begin
             STDIN.read_nonblock(100)
           rescue Errno::EAGAIN
@@ -136,7 +136,7 @@ if action == :stop
           rescue EOFError
             # Operator pressed <Ctrl>d
             forced = true
-            slept = RTT_STOP_WARNING
+            slept = WORKETY_STOP_WARNING
           end
         end
         
@@ -217,7 +217,7 @@ at_exit { File.delete(pidfile) if delete_pidfile }
 
 # Watchdog process if needed
 #
-RTT_RESTART_DELAY = 5
+WORKETY_RESTART_DELAY = 5
 
 module Signal
   # Signal received by watchdog is propogated to child by this helper method
@@ -271,8 +271,8 @@ if action == :start && !options[:no_watchdog]
       break
     end
 
-    STDOUT.write "Restarting after #{RTT_RESTART_DELAY} seconds\n"
-    sleep RTT_RESTART_DELAY
+    STDOUT.write "Restarting after #{WORKETY_RESTART_DELAY} seconds\n"
+    sleep WORKETY_RESTART_DELAY
   end
 end
 

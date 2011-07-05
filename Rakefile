@@ -18,10 +18,10 @@ begin
   require 'jeweler'
   
   Jeweler::Tasks.new do |gemspec|
-    gemspec.name = "ruby-threads-toolkit"
-    gemspec.summary = "Create multithreaded applications with smart persistent internal queues, WEB/REST interface, exception handling and recovery"
+    gemspec.name = "workety"
+    gemspec.summary = "Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to hoptoad, load rails environment at late stage"
     gemspec.email = "stan@senotrusov.com"
-    gemspec.homepage = "http://github.com/senotrusov/ruby-threads-toolkit"
+    gemspec.homepage = "http://github.com/senotrusov/workety"
     gemspec.authors = ["Stanislav Senotrusov"]
     
     gemspec.add_dependency 'trollop'

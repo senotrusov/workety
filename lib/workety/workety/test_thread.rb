@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-class Rtt::TestThread
+class Workety::TestThread
   # Before dropping privileges 
   def initialize
     STDOUT.write "#{self.class} init, pid #{Process.pid}\n"
@@ -39,7 +39,7 @@ class Rtt::TestThread
 #      Thread.new { 1000.times { Rails.logger.error "test" } } 
 #      Thread.new { 1000.times { STDOUT.write "test\n" } }
 #    end
-    # cat log/rtt-test_thread.log |grep -v "^test$"
+    # cat log/workety-test_thread.log |grep -v "^test$"
     
   end
   
