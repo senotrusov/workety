@@ -430,6 +430,8 @@ begin
   # Instantiate class.
   # If there is some thing to do as root (like listening for 80 port) class initialize is the place to do it.
   #
+  require "workety/test_thread.rb" if class_name == "Workety::TestThread"
+  
   mutex.synchronize do
     Process.exit(true) if must_terminate
     thread = begin

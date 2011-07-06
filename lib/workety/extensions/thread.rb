@@ -15,6 +15,32 @@
 
 
 class Thread
+
+  def self.workety(*args)
+    new do
+
+      begin
+        yield(*args)
+
+      rescue ScriptError, StandardError => exception
+        begin
+          exception.log!
+        ensure
+          Workety.stop
+        end
+
+      ensure
+        begin
+          ActiveRecord::Base.clear_active_connections!
+        rescue ScriptError, StandardError => exception
+          exception.log!
+        end
+      end
+
+    end
+  end
+
+
   def details options = {}
 
     title = "Thread#{" " + options[:title] if options[:title]}"
@@ -35,5 +61,6 @@ class Thread
     
       ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
   end
+
 end
 

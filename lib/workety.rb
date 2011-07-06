@@ -13,35 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
-require 'pp'
-
-require 'workety/core-extensions/accessors_generator.rb'
-require 'workety/core-extensions/exception.rb'
-require 'workety/core-extensions/file.rb'
-require 'workety/core-extensions/pathname.rb'
-require 'workety/core-extensions/signal.rb'
-require 'workety/core-extensions/socket.rb'
-
-
-require 'thread'
-
-require 'workety/thread-extensions/condition_variable.rb'
-require 'workety/thread-extensions/mutexed_accessors.rb'
-require 'workety/thread-extensions/smart_queue.rb'
-require 'workety/thread-extensions/persistent_queue.rb'
-require 'workety/thread-extensions/thread.rb'
-require 'workety/thread-extensions/thread_lock.rb'
-require 'workety/thread-extensions/threadsafe_sequence.rb'
-require 'workety/thread-extensions/threadsafe_sequence_loop.rb'
-
-
-require "workety/patches/tzinfo.rb" if Gem.available? "tzinfo"
-
-
+puts "*" * 100
 module Workety
 end
 
-require "workety/workety/thread.rb"
-require "workety/workety/test_thread.rb"
+
+require 'pp'
+
+
+require 'workety/extensions/exception.rb'
+require 'workety/extensions/signal.rb'
+
+
+require 'thread'
+require 'workety/extensions/thread.rb'
+
+
+require "workety/extensions/tzinfo.rb" if Gem.available? "tzinfo"
 
