@@ -282,7 +282,7 @@ end
 # This will load bundler, rails framework and define application configuration class
 require File.expand_path('config/application')
 
-Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/threads"
+Rails.configuration.autoload_paths.push "#{Rails.configuration.root}/app/workety"
 
 if action == :console
   Rails.logger = ActiveSupport::BufferedLogger.new(STDOUT)
