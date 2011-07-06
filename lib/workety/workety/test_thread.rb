@@ -28,17 +28,35 @@ class Workety::TestThread
     STDOUT.write "STDOUT test\n"
     STDERR.write "STDERR test\n"
 
-
-    Thread.new do
+    Thread.workety do
+      sleep 5
+      bad_method
+    end
+    
+#    Thread.new do
+#      begin
+#        sleep 5
+#        STDOUT.write "Workety.stop\n"
+#        Workety.stop
+#      rescue Exception => e
+#        e.log!
+#      end
+#    end
+    
+    @ws = Thread.new do
       begin
-        sleep 5
-        STDOUT.write "Workety.stop\n"
-        Workety.stop
+        until Workety.stop? do
+          STDOUT.write "Workety.stop?\n"
+          sleep 1
+        end
+        STDOUT.write "Workety.stop? is true\n"
+
       rescue Exception => e
         e.log!
       end
     end
-    
+
+
     @t = Thread.new do
       600.times do |t|
         STDOUT.write "#{self.class} Doing #{t}\n"
@@ -57,6 +75,7 @@ class Workety::TestThread
   def join
     STDOUT.write "#{self.class} join\n"
     @t.join
+    @ws.join
     STDOUT.write "#{self.class} done join\n"
     STDOUT.write "#{self.class} sleep\n"
     #sleep 30

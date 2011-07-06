@@ -341,7 +341,7 @@ begin
   
   
   # Workety.stop to shutdown process from within worker 
-  #  
+  #
   module Workety
     def self.stop
       @stop_action.call
@@ -350,7 +350,27 @@ begin
     def self.stop_action= stop_action
       @stop_action = stop_action
     end
+    
+    # Initialize/start call are inside that @mutex, so calling Workety.stop? from within it will 
+    # lead to "ThreadError: deadlock; recursive locking"
+    # However, calling Workety.stop? from initialize/start does not make any sence,
+    # since stop state can never be reached (set) while initialize/stop are running
+    def self.stop?
+      @mutex.synchronize do
+        @must_stop
+      end
+    end
+    
+    def self.mutex= mutex
+      @mutex = mutex
+    end
+    
+    def self.must_stop= must_stop
+      @must_stop = must_stop
+    end
   end
+  
+  Workety.mutex = mutex
 
   
   # A block to call to thread to stop
@@ -358,7 +378,7 @@ begin
   Workety.stop_action = stop_action = Proc.new do
     mutex.synchronize do
       unless must_terminate
-        must_terminate = true
+        Workety.must_stop = must_terminate = true
         thread.stop if started
       end
     end

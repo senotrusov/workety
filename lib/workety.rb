@@ -42,12 +42,6 @@ require "workety/patches/tzinfo.rb" if Gem.available? "tzinfo"
 module Workety
 end
 
+require "workety/workety/thread.rb"
 require "workety/workety/test_thread.rb"
-
-
-#module DaemonicThreads
-#  class MustTerminatedState < StandardError; end
-#end
-
-#require "workety/base.rb"
 
