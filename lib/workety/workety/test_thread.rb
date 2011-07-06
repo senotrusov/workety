@@ -28,6 +28,17 @@ class Workety::TestThread
     STDOUT.write "STDOUT test\n"
     STDERR.write "STDERR test\n"
 
+
+    Thread.new do
+      begin
+        sleep 5
+        STDOUT.write "Workety.stop\n"
+        Workety.stop
+      rescue Exception => e
+        e.log!
+      end
+    end
+    
     @t = Thread.new do
       600.times do |t|
         STDOUT.write "#{self.class} Doing #{t}\n"

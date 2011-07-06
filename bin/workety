@@ -319,16 +319,43 @@ at_exit { Rails.logger.flush }
 # initialize() then start()
 # There is no strict order for stop and join - stop may be called before join 
 #
+
 begin
+  # This is a case for threaded worker.
+  #
+  # If worker does not have any threads then a different (not yet coded) path should be given -
+  # 
+  #   * no mutex/started/must_terminate
+  #   * no Signal.threaded_trap
+  #   * no thread list on USR1
+  #   * Just instantiate the class and call .start on it, leaving signal handling to that class
+  #
+  # However, there is a need in 1) Parent process watchdog and 2) Drop privilegies and chown logfile
+  # so that blocks of code must be somehow refactored to class/function, and that initiative may
+  # push me to refactor the whole this file to classes, so I just leave it for now.
+  
   thread = nil
   mutex = Mutex.new
   started = false
   must_terminate = false
   
   
+  # Workety.stop to shutdown process from within worker 
+  #  
+  module Workety
+    def self.stop
+      @stop_action.call
+    end
+    
+    def self.stop_action= stop_action
+      @stop_action = stop_action
+    end
+  end
+
+  
   # A block to call to thread to stop
   #
-  stop_action = Proc.new do
+  Workety.stop_action = stop_action = Proc.new do
     mutex.synchronize do
       unless must_terminate
         must_terminate = true
@@ -361,7 +388,7 @@ begin
   end
 
   
-  # Watchdog thread will exist process if parent process is gone
+  # Watchdog thread will shutdown process if parent process is gone
   #
   if action == :start && !options[:no_watchdog]
     Thread.new do

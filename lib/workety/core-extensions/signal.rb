@@ -15,10 +15,8 @@
 
 
 module Signal
-  def self.threaded_handler(options = {})
-    options[:exit_on_error] = true unless options.has_key? :exit_on_error
-    
-    Proc.new do
+  def self.threaded_trap(signal, options = {})
+    trap(signal) do
       begin 
         
         Thread.new do
@@ -28,23 +26,26 @@ module Signal
             begin
               exception.log!
             ensure
-              Process.exit(false) if options[:exit_on_error]
+              Process.exit(false) unless options[:dont_exit_on_error]
             end
           end 
         end
 
+      # A case for the following rescue block:
+      # 
+      # 1000000.times { |i| begin; Thread.new {sleep 100}; rescue => e; puts i; raise e; end }
+      # 2848
+      # ThreadError: can't create Thread (1)
+      
       rescue ScriptError, StandardError => exception
         begin
           exception.log!
         ensure
-          Process.exit(false) if options[:exit_on_error]
+          Process.exit(false) unless options[:dont_exit_on_error]
         end
       end 
+      
     end
-  end
-  
-  def self.threaded_trap(signal, options = {}, & block)
-    trap(signal, & threaded_handler(options, & block))
   end
 end
 
