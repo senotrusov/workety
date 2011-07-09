@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-class Workety::TestThread
+class SimpleWorketyThread
   # Before dropping privileges 
   def initialize
   end
