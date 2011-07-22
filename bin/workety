@@ -195,8 +195,9 @@ end
 if File.exists?(pidfile)
   begin
     Process.getpgid(pid = File.read(pidfile).to_i)
-    STDERR.write "ERROR: Process is already running with pid #{pid}\n"
-    Process.exit false
+    # STDERR.write "ERROR: Process is already running with pid #{pid}\n"
+    # Process.exit false
+    STDERR.write "WARNING: Found pidfile #{pidfile} with pid #{pid} and a process running with that pid\n"
   rescue Errno::ENOENT
     # Do nothing
   rescue Errno::ESRCH
