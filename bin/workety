@@ -238,16 +238,18 @@ end
 
 if action == :start && !options[:no_watchdog]
 
-  must_terminate = false
+  must_stop = false
   
   loop do
+    # There is a need to reseed random number generators after each fork.
+    # Fortunately, ruby developers already do this for us, as I get from http://redmine.ruby-lang.org/issues/4579
     if (child_pid = fork)
       # Parent restarts child and propagate signals to him.
 
-      Signal.propagate(child_pid, :INT)  { must_terminate = true }
-      Signal.propagate(child_pid, :TERM) { must_terminate = true }
+      Signal.propagate(child_pid, :INT)  { must_stop = true }
+      Signal.propagate(child_pid, :TERM) { must_stop = true }
       Signal.propagate(child_pid, :USR1)
-      Signal.propagate(child_pid, :USR2, :KILL) { must_terminate = true }
+      Signal.propagate(child_pid, :USR2, :KILL) { must_stop = true }
       
       Process.wait(child_pid)
       
@@ -256,7 +258,7 @@ if action == :start && !options[:no_watchdog]
         ($?.signaled? ? " because of an uncaught signal #{$?.termsig}" : "") +
         ($?.coredump? ? " and coredump" : "") + "\n"
 
-      if must_terminate || $?.exitstatus == 0
+      if must_stop || $?.exitstatus == 0
         STDOUT.write "Terminating\n"
         Process.exit(true)
       end
@@ -313,231 +315,38 @@ Rails.logger.flush
 at_exit { Rails.logger.flush }
 
 
-# There is a need to reseed random number generators after each fork.
-# Fortunately, ruby developers already do this for us, as I get from http://redmine.ruby-lang.org/issues/4579
-
-
-# Initialize, start, stop and join worker class
-# Drop process privileges after initialize
-# Signal handling and watchdog for parent
+# Handling stop signals
+# 
+# If signal handler was called second time while the first is still running,
+# then mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
+# as all handling occurs in main thread. To avoid that signal handler spawns new thread
+# which take care of stopping the process 
 #
-# initialize() then start()
-# There is no strict order for stop and join - stop may be called before join 
+Signal.threaded_trap(:INT)  { Workety.stop } # Ctrl+C
+Signal.threaded_trap(:TERM) { Workety.stop } # kill
+Signal.threaded_trap(:USR1) { Thread.log }   # USR1 signal to display list of running thread and their backtraces
+Signal.trap(:USR2, "IGNORE")                 # USR2 signal used as a warning before KILL signal
+
+
+# Watchdog thread will shutdown process if parent process is gone
 #
-
-begin
-  # This is a case for threaded worker.
-  #
-  # If worker does not have any threads then a different (not yet coded) path should be given -
-  # 
-  #   * no mutex/started/must_terminate
-  #   * no Signal.threaded_trap
-  #   * no thread list on USR1
-  #   * Just instantiate the class and call .start on it, leaving signal handling to that class
-  #
-  # However, there is a need in 1) Parent process watchdog and 2) Drop privilegies and chown logfile
-  # so that blocks of code must be somehow refactored to class/function, and that initiative may
-  # push me to refactor the whole this file to classes, so I just leave it for now.
-  #
-  # Additionally, it nice to have Workety module useful in, say, interactive console without initialization hereafter
-  
-  thread = nil
-  mutex = Mutex.new
-  started = false
-  must_terminate = false
-  
-  
-  # Workety.stop to shutdown process from within worker 
-  #
-  module Workety
-    # class << self
-    
-    def self.abort
-      @stop_action.call(true)
-    end
-    
-    def self.aborted?
-      @mutex.synchronize do
-        @aborted
-      end
-    end
-    
-    def self.aborted= aborted
-      @aborted = aborted
-    end
-    
-    def self.stop
-      @stop_action.call
-    end
-    
-    def self.stop_action= stop_action
-      @stop_action = stop_action
-    end
-    
-    # Initialize/start call are inside that @mutex, so calling Workety.stop? from within it will 
-    # lead to "ThreadError: deadlock; recursive locking"
-    # However, calling Workety.stop? from initialize/start does not make any sence,
-    # since stop state can never be reached (set) while initialize/stop are running
-    def self.stop?
-      @mutex.synchronize do
-        @must_stop
-      end
-    end
-    
-    def self.mutex= mutex
-      @mutex = mutex
-    end
-    
-    def self.must_stop= must_stop
-      @must_stop = must_stop
-    end
-    
-    def self.list_threads
-      list = Thread.list
-      Rails.logger.warn "Thread list: #{list.length} threads total at #{Time.now}"
-      
-      list.each_with_index do |item, index|
-        Rails.logger.warn item.details(:title => "#{index + 1} of #{list.length}")
-      end
-    end
-  end
-  
-  Workety.mutex = mutex
-  
-  
-  # A block to call to thread to stop
-  #
-  Workety.stop_action = stop_action = Proc.new do |aborted|
-    mutex.synchronize do
-      Workety.aborted = true if aborted
-      
-      unless must_terminate
-        Workety.must_stop = must_terminate = true
-        
-        # Timeout for stop() and join()
-        # When the process is stopped by a signal, watchdog or signal sender take care of timeout
-        # But when the process call Workety.stop/abort by itself, these timeout function will ensure successful termination  
-        Thread.new do
-          begin
-            sleep WORKETY_STOP_SELF_WATCHDOG_TIMEOUT
-            Rails.logger.info "Timeout stopping process"
-            Workety.list_threads
-          rescue ScriptError, StandardError => exception
-            exception.log!
-          ensure
-            Process.exit(false)
-          end
-        end
-        
-        if started
-          Thread.new do
-            begin
-              thread.stop 
-            rescue ScriptError, StandardError => exception
-              begin
-                exception.log!
-              ensure
-                Process.exit(false)
-              end              
-            end
-          end
-        end
-        
-      end
-    end
-  end
-  
-  
-  # Handling stop signals
-  # 
-  # If signal handler was called second time while the first is still running,
-  # then mutex inside that handler will lead to deadlock (recursive locking, ThreadError)
-  # as all handling occurs in main thread. To avoid that signal handler spawns new thread
-  # thich taka care of stoping the process 
-  #
-  Signal.threaded_trap(:INT, & stop_action)  # Ctrl+C
-  Signal.threaded_trap(:TERM, & stop_action) # kill
-  Signal.trap(:USR2, "IGNORE") # USR2 signal used as a warning before KILL signal
-  
-  
-  # USR1 signal to display list of running thread and their backtraces
-  #
-  Signal.threaded_trap(:USR1) { Workety.list_threads }
-
-  
-  # Watchdog thread will shutdown process if parent process is gone
-  #
-  if action == :start && !options[:no_watchdog]
-    Thread.new do
-      begin
-        sleep 30 until Process.ppid == 1
-        Rails.logger.fatal "Parent process is missing, terminating"
-        stop_action.call
-      rescue ScriptError, StandardError => exception
-        begin
-          exception.log!
-        ensure
-          Process.exit(false)
-        end
-      end 
-    end
-  end
-
-  
-  # Instantiate class.
-  # If there is some thing to do as root (like listening for 80 port) class initialize is the place to do it.
-  #
-  require "workety/test_thread.rb" if class_name == "Workety::TestThread"
-  
-  mutex.synchronize do
-    Process.exit(true) if must_terminate
-    thread = begin
-        class_name.constantize
-      rescue NameError => exception
-        exception.log!
-        Trollop::die exception.message + ". The class you specified did not found"
-      end.new
-  end
-
-
-  # Drop privilegies and chown logfile
-  #
-  # http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
-  # http://www.ruby-forum.com/topic/110492
-  #
-  if options[:user] || options[:group]
-    require 'etc'
-
-    user = options[:user] ? Etc.getpwnam(options[:user]) : Etc.getpwuid(Process.euid)
-    group = options[:group] ? Etc.getgrnam(options[:group]) : Etc.getgrgid(user.gid)
-    
-    Rails.logger.chown_logfile(user.uid, group.gid) if Rails.logger.respond_to?(:chown_logfile)
-    
-    Process.initgroups(user.name, group.gid)
-    
-    Process::GID.change_privilege(group.gid) 
-    Process::UID.change_privilege(user.uid)
-  end
-  
- 
-  # Invoke .start
-  mutex.synchronize do
-    Process.exit(true) if must_terminate
-    thread.start
-    started = true
-  end
-  
-  
-  # Join
-  thread.join
-  
-  Process.exit(!Workety.aborted?)
-  
-rescue ScriptError, StandardError => exception
-  begin
-    exception.log!
-  ensure
-    Process.exit(false)
+if action == :start && !options[:no_watchdog]
+  Thread.rescue_exit do
+    sleep 30 until Process.ppid == 1
+    Rails.logger.fatal "Parent process is missing, terminating"
+    Workety.stop
   end
 end
+
+
+# TODO: proper test environment
+# require "workety/test_thread.rb" if class_name == "Workety::TestThread"
+
+
+# Start the worker
+#
+Workety.start class_name, options[:user], options[:group]
+Workety.join
+
+Process.exit(!Workety.aborted?)
 

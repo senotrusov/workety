@@ -45,11 +45,11 @@ class Workety::TestThread
     
     @ws = Thread.new do
       begin
-        until Workety.stop? do
-          STDOUT.write "Workety.stop?\n"
+        until Workety.must_stop? do
+          STDOUT.write "Workety.must_stop?\n"
           sleep 1
         end
-        STDOUT.write "Workety.stop? is true\n"
+        STDOUT.write "Workety.must_stop? is true\n"
 
       rescue Exception => e
         e.log!

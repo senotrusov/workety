@@ -20,22 +20,13 @@ class TimedExit
     @must_stop = false
     @timeout = false
     
-    Thread.new do
-      begin
-        sleep timeout
-        
-        @mutex.synchronize do
-          unless @must_stop
-            @timeout = true
-            Rails.logger.info message
-            Process.exit(false)
-          end
-        end
-        
-      rescue ScriptError, StandardError => exception
-        begin
-          exception.log!
-        ensure
+    Thread.rescue_exit do
+      sleep timeout
+      
+      @mutex.synchronize do
+        unless @must_stop
+          @timeout = true
+          Rails.logger.info message
           Process.exit(false)
         end
       end

@@ -14,22 +14,20 @@
 #  limitations under the License.
 
 
-module Workety
-end
-
-
 require 'pp'
 
 
 require 'workety/extensions/exception.rb'
+require 'workety/extensions/kernel.rb'
+require 'workety/extensions/process.rb'
 require 'workety/extensions/signal.rb'
-
-
-require 'thread'
-require 'workety/extensions/thread.rb'
-
-
-require 'workety/extensions/tzinfo.rb' if Gem.available? 'tzinfo'
 require 'workety/extensions/socket.rb'
+require 'workety/extensions/thread.rb'
+require 'workety/extensions/tzinfo.rb' if Gem.available? 'tzinfo'
 
 require 'workety/redis_queue.rb' if Gem.available? 'hiredis'
+require 'workety/timed_exit.rb'
+
+
+require 'workety/workety.rb'
+

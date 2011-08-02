@@ -14,38 +14,24 @@
 #  limitations under the License.
 
 
-class Thread
+require 'thread'
 
+class Thread
+  
   def self.workety(*args)
     new do
-
       begin
-        yield(*args)
-
-      rescue ScriptError, StandardError => exception
-        begin
-          exception.log!
-        ensure
-          begin
-            Workety.abort
-          rescue ScriptError, StandardError => stop_exception
-            begin
-              stop_exception.log!
-            ensure
-              Process.exit(false)
-            end
-          end
-        end
-
-    # That ensure block is executed on Thread#kill as well
-    ensure 
-        begin
-          ActiveRecord::Base.clear_active_connections!
-        rescue ScriptError, StandardError => exception
-          exception.log!
-        end
+        Workety.rescue_abort { yield(*args) }
+        
+      ensure
+        # That block is executed on Thread#kill as well
+        #
+        # I think an error in clear_active_connections! is not the case
+        # for panic and instant process shutdown but for normal shutdown procedure.
+        #  
+        Workety.rescue_abort { ActiveRecord::Base.clear_active_connections! }
+         
       end
-
     end
   end
   
@@ -59,11 +45,19 @@ class Thread
 
         # If thread is blocked by Socket#read and then are forced to unblock by using Socket#shutdown and then Socket#close methods,
         # that will raise an exception. That exception has no value to set Workety.aborted? flag.
-        # Here we suggest that such technique was used if Workety.stop? is set.
-        Workety.abort unless Workety.stop? 
+        # Here we suggest that such technique was used if Workety.must_stop? is set.
+        Workety.abort unless Workety.must_stop? 
       end
     end
   end
+  
+  
+  def self.rescue_exit(*args)
+    new do
+      rescue_exit { yield(*args) }
+    end
+  end
+
   
   
   def details options = {}
@@ -85,6 +79,15 @@ class Thread
     "\nBacktrace:\n" +
     
       ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
+  end
+  
+  def self.log
+    threads = self.list
+    Rails.logger.warn "Thread list: #{threads.length} threads total at #{Time.now}"
+    
+    threads.each_with_index do |item, index|
+      Rails.logger.warn item.details(:title => "#{index + 1} of #{threads.length}")
+    end
   end
 
 end

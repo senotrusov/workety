@@ -15,37 +15,17 @@
 
 
 module Signal
-  def self.threaded_trap(signal, options = {})
+  def self.threaded_trap(signal)
     trap(signal) do
-      begin 
-        
-        Thread.new do
-          begin
-            yield
-          rescue ScriptError, StandardError => exception
-            begin
-              exception.log!
-            ensure
-              Process.exit(false) unless options[:dont_exit_on_error]
-            end
-          end 
-        end
-
-      # A case for the following rescue block:
-      # 
-      # 1000000.times { |i| begin; Thread.new {sleep 100}; rescue => e; puts i; raise e; end }
-      # 2848
-      # ThreadError: can't create Thread (1)
-      
-      rescue ScriptError, StandardError => exception
-        begin
-          exception.log!
-        ensure
-          Process.exit(false) unless options[:dont_exit_on_error]
-        end
-      end 
-      
+      rescue_exit do # This rescue_exit is the case for ThreadError: can't create Thread (see example below)        
+        Thread.rescue_exit { yield }
+      end
     end
   end
 end
+
+
+# 1000000.times { |i| begin; Thread.new {sleep 100}; rescue => e; puts i; raise e; end }
+# 2848
+# ThreadError: can't create Thread (1)
 
