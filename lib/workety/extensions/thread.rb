@@ -60,7 +60,6 @@ class Thread
   end
 
   
-  
   def details options = {}
 
     title = "Thread#{" " + options[:title] if options[:title]}"
@@ -82,6 +81,7 @@ class Thread
       ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
   end
   
+  
   def self.log message = nil
     threads = self.list
     Rails.logger.warn(message) if message
@@ -93,6 +93,7 @@ class Thread
     
     Rails.logger.flush if Rails.logger.respond_to?(:flush)
   end
+  
   
   def log_join(message, limit = nil)
     join limit
