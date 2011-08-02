@@ -15,8 +15,8 @@
 
 
 module Kernel
-  def rescue_exit(*args)
-    yield(*args)
+  def rescue_exit
+    yield
   rescue ScriptError, StandardError => exception
     begin
       exception.log!

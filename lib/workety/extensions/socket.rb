@@ -42,5 +42,10 @@ class Socket
   # At least Windows XP does not have it
   NETWORK_EXEPTIONS.push(Errno::EPROTO) if defined?(Errno::EPROTO)
   NETWORK_EXEPTIONS.push(Errno::ECOMM)  if defined?(Errno::ECOMM)
+  
+  def self.may_fail
+    yield
+  rescue *(Socket::NETWORK_EXEPTIONS)
+  end
 end
 

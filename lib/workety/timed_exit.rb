@@ -17,6 +17,7 @@
 class TimedExit
   def initialize(timeout = 60, message = "Timeout reached")
     @mutex = Mutex.new
+
     @must_cancel = false
     @timeout_reached = false
     
@@ -30,6 +31,11 @@ class TimedExit
           Process.exit(false)
         end
       end
+    end
+    
+    if block_given?
+      yield
+      cancel
     end
   end
   

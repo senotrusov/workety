@@ -101,8 +101,8 @@ module Workety
     end
     
 
-    def rescue_abort(*args)
-      yield(*args)
+    def rescue_abort
+      yield
     rescue ScriptError, StandardError => exception
       begin
         exception.log!
@@ -117,8 +117,7 @@ module Workety
     # But when the process call Workety.stop/abort by itself, this timeout function will ensure successful termination  
     def stop_watchdog
       sleep WORKETY_STOP_SELF_WATCHDOG_TIMEOUT
-      Rails.logger.info "Timeout stopping process"
-      Thread.log
+      Thread.log "Timeout stopping process"
     ensure
       Process.exit(false)
     end

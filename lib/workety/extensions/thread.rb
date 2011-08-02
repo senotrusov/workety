@@ -18,10 +18,10 @@ require 'thread'
 
 class Thread
   
-  def self.workety(*args)
+  def self.workety
     new do
       begin
-        Workety.rescue_abort { yield(*args) }
+        Workety.rescue_abort { yield }
         
       ensure
         # That block is executed on Thread#kill as well
@@ -36,10 +36,10 @@ class Thread
   end
   
   
-  def self.networkety(*args)
+  def self.networkety
     workety do
       begin
-        yield(*args)
+        yield
       rescue *(Socket::NETWORK_EXEPTIONS) => exception
         Rails.logger.warn Thread.current.details(:title => "stopped due a network error")
 
@@ -52,9 +52,9 @@ class Thread
   end
   
   
-  def self.rescue_exit(*args)
+  def self.rescue_exit
     new do
-      rescue_exit { yield(*args) }
+      rescue_exit { yield }
     end
   end
 
@@ -81,13 +81,19 @@ class Thread
       ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
   end
   
-  def self.log
+  def self.log message = nil
     threads = self.list
+    Rails.logger.warn(message) if message
     Rails.logger.warn "Thread list: #{threads.length} threads total at #{Time.now}"
     
     threads.each_with_index do |item, index|
       Rails.logger.warn item.details(:title => "#{index + 1} of #{threads.length}")
     end
+  end
+  
+  def log_join(message, limit = nil)
+    join limit
+    Rails.logger.info message
   end
 
 end
