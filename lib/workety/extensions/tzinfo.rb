@@ -1,5 +1,5 @@
 
-#  Copyright 2009 Stanislav Senotrusov <stan@senotrusov.com>
+#  Copyright 2006-2011 Stanislav Senotrusov <stan@senotrusov.com>
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
