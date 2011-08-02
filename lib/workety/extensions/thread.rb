@@ -41,11 +41,12 @@ class Thread
       begin
         yield
       rescue *(Socket::NETWORK_EXEPTIONS) => exception
-        Rails.logger.warn Thread.current.details(:title => "stopped due a network error")
+        Rails.logger.warn exception.details(:title => "(Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS)")
+        Rails.logger.flush if Rails.logger.respond_to?(:flush)
 
         # If thread is blocked by Socket#read and then are forced to unblock by using Socket#shutdown and then Socket#close methods,
         # that will raise an exception. That exception has no value to set Workety.aborted? flag.
-        # Here we suggest that such technique was used if Workety.must_stop? is set.
+        # If Workety.must_stop? is set we suggest that such technique was used.
         Workety.abort unless Workety.must_stop? 
       end
     end
@@ -89,6 +90,8 @@ class Thread
     threads.each_with_index do |item, index|
       Rails.logger.warn item.details(:title => "#{index + 1} of #{threads.length}")
     end
+    
+    Rails.logger.flush if Rails.logger.respond_to?(:flush)
   end
   
   def log_join(message, limit = nil)

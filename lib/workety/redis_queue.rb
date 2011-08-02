@@ -51,7 +51,11 @@ class RedisQueue
     end
     
     if thread
-      thread.run
+      begin
+        thread.run
+      rescue ThreadError => exception
+        raise exception if exception.message != "killed thread"
+      end
       thread.join(limit)
     end
   end

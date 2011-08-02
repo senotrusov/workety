@@ -52,7 +52,9 @@ class Exception
   def details options = {}
 
     title = "Exception#{" " + options[:title] if options[:title]}"
-    title = title + "\n" + ("-" * title.length) 
+    title = title + "\n" + ("-" * title.length)
+    
+    options = options.reject {|key, value| key == :title }
 
     "\n#{title}\n" +
     

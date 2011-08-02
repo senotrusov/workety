@@ -348,5 +348,7 @@ end
 Workety.start class_name, options[:user], options[:group]
 Workety.join
 
+Rails.logger.debug { "Exiting with exitstatus #{(!Workety.aborted?) ? 0 : 1}" }
+ 
 Process.exit(!Workety.aborted?)
 
