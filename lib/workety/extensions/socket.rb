@@ -35,7 +35,9 @@ class Socket
     Errno::ENETRESET,
     Errno::EIO,
     Errno::EHOSTDOWN,
-    Errno::ECONNABORTED]
+    Errno::ECONNABORTED,
+    Errno::ENOTCONN, # In attempt to shutdown() socket with remote side disconnected (send responds with Errno::EPIPE: Broken pipe)
+    ]  
   
   # At least Windows XP does not have it
   NETWORK_EXEPTIONS.push(Errno::EPROTO) if defined?(Errno::EPROTO)

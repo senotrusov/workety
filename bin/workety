@@ -79,6 +79,7 @@ WORKETY_STOP_TICK = 0.05
 WORKETY_STOP_NOTICE = 5
 WORKETY_STOP_WARNING = 55
 WORKETY_STOP_KILL = 60
+WORKETY_STOP_SELF_WATCHDOG_TIMEOUT = 65
 
 if action == :stop
   begin
@@ -337,6 +338,8 @@ begin
   # However, there is a need in 1) Parent process watchdog and 2) Drop privilegies and chown logfile
   # so that blocks of code must be somehow refactored to class/function, and that initiative may
   # push me to refactor the whole this file to classes, so I just leave it for now.
+  #
+  # Additionally, it nice to have Workety module useful in, say, interactive console without initialization hereafter
   
   thread = nil
   mutex = Mutex.new
@@ -347,6 +350,22 @@ begin
   # Workety.stop to shutdown process from within worker 
   #
   module Workety
+    # class << self
+    
+    def self.abort
+      @stop_action.call(true)
+    end
+    
+    def self.aborted?
+      @mutex.synchronize do
+        @aborted
+      end
+    end
+    
+    def self.aborted= aborted
+      @aborted = aborted
+    end
+    
     def self.stop
       @stop_action.call
     end
@@ -372,18 +391,58 @@ begin
     def self.must_stop= must_stop
       @must_stop = must_stop
     end
+    
+    def self.list_threads
+      list = Thread.list
+      Rails.logger.warn "Thread list: #{list.length} threads total at #{Time.now}"
+      
+      list.each_with_index do |item, index|
+        Rails.logger.warn item.details(:title => "#{index + 1} of #{list.length}")
+      end
+    end
   end
   
   Workety.mutex = mutex
-
+  
   
   # A block to call to thread to stop
   #
-  Workety.stop_action = stop_action = Proc.new do
+  Workety.stop_action = stop_action = Proc.new do |aborted|
     mutex.synchronize do
+      Workety.aborted = true if aborted
+      
       unless must_terminate
         Workety.must_stop = must_terminate = true
-        thread.stop if started
+        
+        # Timeout for stop() and join()
+        # When the process is stopped by a signal, watchdog or signal sender take care of timeout
+        # But when the process call Workety.stop/abort by itself, these timeout function will ensure successful termination  
+        Thread.new do
+          begin
+            sleep WORKETY_STOP_SELF_WATCHDOG_TIMEOUT
+            Rails.logger.info "Timeout stopping process"
+            Workety.list_threads
+          rescue ScriptError, StandardError => exception
+            exception.log!
+          ensure
+            Process.exit(false)
+          end
+        end
+        
+        if started
+          Thread.new do
+            begin
+              thread.stop 
+            rescue ScriptError, StandardError => exception
+              begin
+                exception.log!
+              ensure
+                Process.exit(false)
+              end              
+            end
+          end
+        end
+        
       end
     end
   end
@@ -403,13 +462,7 @@ begin
   
   # USR1 signal to display list of running thread and their backtraces
   #
-  Signal.threaded_trap(:USR1) do
-    list = Thread.list
-    Rails.logger.info "Thread list: #{list.length} threads total at #{Time.now}"
-    list.each_with_index do |item, index|
-      Rails.logger.info item.details(:title => "#{index + 1} of #{list.length}")
-    end
-  end
+  Signal.threaded_trap(:USR1) { Workety.list_threads }
 
   
   # Watchdog thread will shutdown process if parent process is gone
@@ -478,6 +531,7 @@ begin
   # Join
   thread.join
   
+  Process.exit(!Workety.aborted?)
   
 rescue ScriptError, StandardError => exception
   begin

@@ -26,10 +26,19 @@ class Thread
         begin
           exception.log!
         ensure
-          Workety.stop
+          begin
+            Workety.abort
+          rescue ScriptError, StandardError => stop_exception
+            begin
+              stop_exception.log!
+            ensure
+              Process.exit(false)
+            end
+          end
         end
 
-      ensure
+    # That ensure block is executed on Thread#kill as well
+    ensure 
         begin
           ActiveRecord::Base.clear_active_connections!
         rescue ScriptError, StandardError => exception
@@ -39,8 +48,24 @@ class Thread
 
     end
   end
+  
+  
+  def self.networkety(*args)
+    workety do
+      begin
+        yield(*args)
+      rescue *(Socket::NETWORK_EXEPTIONS) => exception
+        Rails.logger.warn Thread.current.details(:title => "stopped due a network error")
 
-
+        # If thread is blocked by Socket#read and then are forced to unblock by using Socket#shutdown and then Socket#close methods,
+        # that will raise an exception. That exception has no value to set Workety.aborted? flag.
+        # Here we suggest that such technique was used if Workety.stop? is set.
+        Workety.abort unless Workety.stop? 
+      end
+    end
+  end
+  
+  
   def details options = {}
 
     title = "Thread#{" " + options[:title] if options[:title]}"

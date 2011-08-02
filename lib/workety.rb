@@ -29,5 +29,7 @@ require 'thread'
 require 'workety/extensions/thread.rb'
 
 
-require "workety/extensions/tzinfo.rb" if Gem.available? "tzinfo"
+require 'workety/extensions/tzinfo.rb' if Gem.available? 'tzinfo'
 require 'workety/extensions/socket.rb'
+
+require 'workety/redis_queue.rb' if Gem.available? 'hiredis'
