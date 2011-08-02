@@ -340,7 +340,7 @@ end
 
 
 # TODO: proper test environment
-# require "workety/test_thread.rb" if class_name == "Workety::TestThread"
+# require "workety/test/test_thread.rb" if class_name == "Workety::TestThread"
 
 
 # Start the worker
