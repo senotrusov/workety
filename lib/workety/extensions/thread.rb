@@ -54,7 +54,7 @@ class Thread
   
   def self.rescue_exit
     new do
-      rescue_exit { yield }
+      Kernel.rescue_exit { yield }
     end
   end
 
