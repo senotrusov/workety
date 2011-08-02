@@ -17,15 +17,15 @@
 class TimedExit
   def initialize(timeout = 60, message = "Timeout reached")
     @mutex = Mutex.new
-    @must_stop = false
-    @timeout = false
+    @must_cancel = false
+    @timeout_reached = false
     
     Thread.rescue_exit do
       sleep timeout
       
       @mutex.synchronize do
-        unless @must_stop
-          @timeout = true
+        unless @must_cancel
+          @timeout_reached = true
           Rails.logger.info message
           Process.exit(false)
         end
@@ -33,10 +33,10 @@ class TimedExit
     end
   end
   
-  def stop
+  def cancel
     @mutex.synchronize do
-      Process.exit(false) if @timeout # See comment below
-      @must_stop = true
+      Process.exit(false) if @timeout_reached # See comment below
+      @must_cancel = true
     end
   end
 end
