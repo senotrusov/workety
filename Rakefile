@@ -23,9 +23,9 @@ begin
     gemspec.email = "stan@senotrusov.com"
     gemspec.homepage = "http://github.com/senotrusov/workety"
     gemspec.authors = ["Stanislav Senotrusov"]
-    
+
     gemspec.add_dependency 'trollop'
-    gemspec.add_dependency 'toadhopper'
+    gemspec.add_dependency 'toadhopper' # TODO: Make optional
   end
   
   Jeweler::GemcutterTasks.new

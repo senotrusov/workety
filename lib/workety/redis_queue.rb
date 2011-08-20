@@ -19,7 +19,7 @@ require 'hiredis'
 class RedisQueue
   def initialize(name, backup_name = nil)
     @queue = "queue." + name
-    @backup_queue = "queue." + backup_name
+    @backup_queue = ("queue." + backup_name) if backup_name
     
     @redis = Hiredis::Connection.new
     
@@ -31,9 +31,15 @@ class RedisQueue
     @redis.write ["RPUSH", @queue, element]
     @redis.read
   end
-  
+
   # Returns element
   def pop
+    @redis.write ["BRPOP", @queue, 0]
+    @redis.read.last
+  end
+  
+  # Returns element
+  def backup_pop
     @redis.write ["BRPOPLPUSH", @queue, @backup_queue, 0]
     @redis.read.last
   end
