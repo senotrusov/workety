@@ -34,9 +34,9 @@ class Exception
 
         raise("Tracker responded with status #{response.status}") if response.status != 200
         
-      rescue ScriptError, StandardError => exception
+      rescue ScriptError, StandardError => tracker_exception
         logger.error "ERROR TRANSFERING EXCEPTION TO TRACKER, the following exceptions are only recorded here:"
-        logger.error exception.details
+        logger.error tracker_exception.details
         logger.error response.body if response
       end
     end      
@@ -45,8 +45,8 @@ class Exception
     
     logger.flush if logger.respond_to?(:flush)
     
-  rescue ScriptError, StandardError => logging_exception
-    logging_exception.display!
+  rescue ScriptError, StandardError => logger_exception
+    logger_exception.display!
     self.display!(options)
   end
 
