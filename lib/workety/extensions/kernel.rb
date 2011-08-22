@@ -19,7 +19,7 @@ module Kernel
     yield
   rescue ScriptError, StandardError => exception
     begin
-      exception.log!
+      exception.report!
     ensure
       Process.exit(false)
     end              

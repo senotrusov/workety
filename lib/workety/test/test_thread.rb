@@ -39,7 +39,7 @@ class Workety::TestThread
 #        STDOUT.write "Workety.stop\n"
 #        Workety.stop
 #      rescue Exception => e
-#        e.log!
+#        e.report!
 #      end
 #    end
     
@@ -52,7 +52,7 @@ class Workety::TestThread
         STDOUT.write "Workety.must_stop? is true\n"
 
       rescue Exception => e
-        e.log!
+        e.report!
       end
     end
 

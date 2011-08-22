@@ -105,7 +105,7 @@ module Workety
       yield
     rescue ScriptError, StandardError => exception
       begin
-        exception.log!
+        exception.report!
       ensure
         Workety.abort
       end
