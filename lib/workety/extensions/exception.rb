@@ -21,7 +21,7 @@ class Exception
     Rails.logger
   end
   
-  # Airbrake API requires the following elements to be present
+  # Airbrake API requires the following elements to be present:
   #   /notice/error/class
   #   /notice/error/backtrace/line
   #   /notice/server-environment/environment-name
