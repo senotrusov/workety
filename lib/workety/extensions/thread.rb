@@ -41,7 +41,8 @@ class Thread
       begin
         yield
       rescue *(Socket::NETWORK_EXEPTIONS) => exception
-        Rails.logger.warn exception.inspect_details(:title => "(Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS)")
+        Rails.logger.warn "Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS"
+        Rails.logger.warn exception.view
         Rails.logger.flush if Rails.logger.respond_to?(:flush)
 
         # If thread is blocked by Socket#read and then are forced to unblock by using Socket#shutdown and then Socket#close methods,
@@ -60,25 +61,27 @@ class Thread
   end
 
   
-  def inspect_details options = {}
+  def view
+    "#{summary_view}\n#{thread_local_vars_view}#{backtrace_view}"
+  end
 
-    title = "Thread#{(" " + options[:title]) if options[:title]}"
-    title = title + "\n" + ("-" * title.length) 
+  def summary_view
+    "#{self.class.name} 0x#{object_id.to_s(16)}: #{status_view}"
+  end
+  
+  def status_view
+    st = status; (st == false) ? "terminated normally" : (st || "terminated with an exception")
+  end
 
-    "\n#{title}\n" +
-    
-      " " + inspect + "\n" +
-    
-    "\nThread-local variables:\n" +
-    
-      self.keys.collect do |key|
-        " #{key.inspect} => \n  " + 
-          (self[key].pretty_inspect rescue self[key].inspect rescue "ERROR: Can not pretty-print or inspect").gsub("\n", "\n  ").strip + "\n" 
-      end.join("\n") +
-    
-    "\nBacktrace:\n" +
-    
-      ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
+  def thread_local_vars_view
+    if (ks = keys).any?
+      vars = {}; ks.each {|k| vars[k] = self[k]}
+      "Thread-local variables: #{vars.inspect}\n"
+    end
+  end
+
+  def backtrace_view
+    ((bt = backtrace) && bt.collect{|line| "\t#{line}\n"}.join("") || "\tBacktrace undefined")
   end
   
   
@@ -88,7 +91,9 @@ class Thread
     Rails.logger.warn "Thread list: #{threads.length} threads total at #{Time.now}"
     
     threads.each_with_index do |item, index|
-      Rails.logger.warn item.inspect_details(:title => "#{index + 1} of #{threads.length}")
+      Rails.logger.warn msg = "Thread #{index + 1} of #{threads.length}"
+      Rails.logger.warn "-" * msg.length
+      Rails.logger.warn item.view
     end
     
     Rails.logger.flush if Rails.logger.respond_to?(:flush)

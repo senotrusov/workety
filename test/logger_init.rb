@@ -5,7 +5,7 @@ else
     Rails.logger = ActiveSupport::BufferedLogger.new(logfile)
 
   rescue StandardError => exception
-    exception.display!
+    exception.view!
 
     Rails.logger = ActiveSupport::BufferedLogger.new(STDOUT)
     Rails.logger.warn "Continuing anyway"

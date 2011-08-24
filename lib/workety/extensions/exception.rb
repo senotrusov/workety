@@ -18,13 +18,41 @@ require 'toadhopper'
 
 class Exception
   
-  attr_accessor :details
+  def details
+    @details ||= {}
+  end
   
   def self.details(msg = nil, details = {})
     ex = new(msg)
-    ex.details = details
+    ex.details.merge! details
     ex
   end
+  
+  def view more_details = {}
+    "#{summary_view}\n#{details_view(more_details)}#{backtrace_view}"
+  rescue ScriptError, StandardError
+    "ERROR CREATING EXCEPTION VIEW"
+  end
+
+  def summary_view
+    "#{self.class.name}: #{message}"
+  end
+  
+  def details_view more_details = {}
+    if (merged_details = details.merge(more_details)).any?
+      "Details: #{merged_details.inspect}\n"
+    end
+  rescue ScriptError, StandardError => exception
+    "Details: ERROR CREATING EXCEPTION DETAILS VIEW: #{exception.summary_view}\n#{exception.backtrace_view}\n\n"
+  end
+  
+  def backtrace_view
+    ((bt = backtrace) && bt.collect{|line| "\t#{line}\n"}.join("") || "\tBacktrace undefined")
+  rescue ScriptError, StandardError => exception
+    "\tERROR CREATING BACKTRACE VIEW: #{exception.summary_view}"
+  end
+  
+  
   
   def logger
     Rails.logger
@@ -44,47 +72,30 @@ class Exception
         raise("Tracker responded with status #{response.status}") if response.status != 200
         
       rescue ScriptError, StandardError => tracker_exception
-        logger.error "ERROR TRANSFERING EXCEPTION TO TRACKER, the following exceptions are only recorded here:"
-        logger.error tracker_exception.inspect_details
+        logger.error "ERROR: EXCEPTION DOES NOT TRANSFERED TO TRACKER"
+        logger.error tracker_exception.view
         logger.error response.body if response
       end
     end      
       
-    logger.error self.inspect_details(more_details)
-    
+    logger.error view(more_details)
     logger.flush if logger.respond_to?(:flush)
     
   rescue ScriptError, StandardError => logger_exception
-    logger_exception.display!
-    self.display!(more_details)
+    STDERR.write "ERROR: EXCEPTION DOES NOT TRANSFERED TO TRACKER AND/OR LOGGED\n"
+    STDERR.write "#{logger_exception.view}\n"
+    STDERR.write "#{view(more_details)}\n"
   end
   
-  
-  def display! more_details = {}
-    STDERR.write inspect_details(more_details) + "\n"
-  end
-  
-  
-  def inspect_details more_details = {}
-    
-    show_details = details.merge(more_details)
-    title = ["Exception", show_details.delete(:title)].compact.join(" ")
-    title = title + "\n" + ("-" * title.length)
-    
-    "\n#{title}\n" +
-    
-    " " + inspect + "\n" +
-    
-    (show_details.empty? ? "" : "\nDetails:\n") +
-    
-      show_details.keys.collect do |key|
-        " #{key.inspect} => \n  " + 
-          (show_details[key].pretty_inspect rescue show_details[key].inspect rescue "ERROR: Can not pretty_inspect or inspect").gsub("\n", "\n   ").strip + "\n" 
-      end.join("\n") +
-    
-    "\nBacktrace:\n" +
-    
-      ((bt = backtrace) && bt.collect{|line|" #{line}\n"}.join("") || "") + "\n"
+  def view! more_details = {}
+    STDERR.write "#{view(more_details)}\n"
   end
 end
+
+
+#begin
+#  raise StandardError.details("ALARM!", :a=>1)
+#rescue => ex
+#  puts ex.view
+#end 
 
