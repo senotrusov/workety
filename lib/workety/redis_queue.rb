@@ -30,18 +30,24 @@ class RedisQueue
   def push element
     @redis.write ["RPUSH", @queue, element]
     @redis.read
+  rescue RuntimeError => exception
+    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
   end
 
   # Returns element
   def pop
     @redis.write ["BRPOP", @queue, 0]
     @redis.read.last
+  rescue RuntimeError => exception
+    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
   end
   
   # Returns element
   def backup_pop
     @redis.write ["BRPOPLPUSH", @queue, @backup_queue, 0]
-    @redis.read.last
+    @redis.read
+  rescue RuntimeError => exception
+    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
   end
   
   def remove_backup element
