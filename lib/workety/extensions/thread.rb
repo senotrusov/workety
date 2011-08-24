@@ -41,7 +41,7 @@ class Thread
       begin
         yield
       rescue *(Socket::NETWORK_EXEPTIONS) => exception
-        Rails.logger.warn exception.details(:title => "(Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS)")
+        Rails.logger.warn exception.inspect_details(:title => "(Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS)")
         Rails.logger.flush if Rails.logger.respond_to?(:flush)
 
         # If thread is blocked by Socket#read and then are forced to unblock by using Socket#shutdown and then Socket#close methods,
@@ -60,9 +60,9 @@ class Thread
   end
 
   
-  def details options = {}
+  def inspect_details options = {}
 
-    title = "Thread#{" " + options[:title] if options[:title]}"
+    title = "Thread#{(" " + options[:title]) if options[:title]}"
     title = title + "\n" + ("-" * title.length) 
 
     "\n#{title}\n" +
@@ -88,7 +88,7 @@ class Thread
     Rails.logger.warn "Thread list: #{threads.length} threads total at #{Time.now}"
     
     threads.each_with_index do |item, index|
-      Rails.logger.warn item.details(:title => "#{index + 1} of #{threads.length}")
+      Rails.logger.warn item.inspect_details(:title => "#{index + 1} of #{threads.length}")
     end
     
     Rails.logger.flush if Rails.logger.respond_to?(:flush)
