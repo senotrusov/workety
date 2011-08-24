@@ -305,10 +305,6 @@ end
 # This will initialize Rails application, load all the application classes 
 require File.expand_path('config/environment')
 
-# This will initialize ActiveRecord for multithreaded applications
-# If two threads will call ActiveRecord::Base for the first time simultaneously, it will lead to some surprise exceptions 
-ActiveRecord::Base if defined?(ActiveRecord::Base)
-
 Rails.logger.auto_flushing = true
 Rails.logger.flush
 

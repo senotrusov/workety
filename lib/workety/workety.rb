@@ -34,6 +34,12 @@
 #
 #
 module Workety
+  class Railtie < Rails::Railtie
+    initializer :workety, :after => :load_environment_config, :before => :load_active_support do |app|
+      Rails.configuration.threadsafe!
+    end
+  end
+  
   @thread = nil
   @mutex = Mutex.new
   @started = false
