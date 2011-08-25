@@ -34,6 +34,8 @@
 #
 #
 module Workety
+  STOP_SELF_WATCHDOG_TIMEOUT = 65
+  
   class Railtie < Rails::Railtie
     initializer :workety, :after => :load_environment_config, :before => :load_active_support do |app|
       Rails.configuration.threadsafe!
@@ -122,7 +124,7 @@ module Workety
     # When the process is stopped by a signal, watchdog or signal sender take care of timeout
     # But when the process call Workety.stop/abort by itself, this timeout function will ensure successful termination  
     def stop_watchdog
-      sleep WORKETY_STOP_SELF_WATCHDOG_TIMEOUT
+      sleep Workety::STOP_SELF_WATCHDOG_TIMEOUT
       Thread.log "Timeout stopping process"
     ensure
       Process.exit(false)

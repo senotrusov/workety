@@ -79,7 +79,7 @@ WORKETY_STOP_TICK = 0.05
 WORKETY_STOP_NOTICE = 5
 WORKETY_STOP_WARNING = 55
 WORKETY_STOP_KILL = 60
-WORKETY_STOP_SELF_WATCHDOG_TIMEOUT = 65
+# There is also a Workety::STOP_SELF_WATCHDOG_TIMEOUT == 65 defined in Workety module
 
 if action == :stop
   begin
