@@ -34,8 +34,9 @@ class RedisQueue
     File.socket?(unix_socket) ? redis.connect_unix(unix_socket) : redis.connect("127.0.0.1", 6379)
     
     if block_given?
-      yield(redis)
+      result = yield(redis)
       redis.disconnect
+      result
     else
       redis
     end
