@@ -16,43 +16,72 @@
 
 require 'hiredis'
 
+
 class RedisQueue
+  class Connection < Hiredis::Connection
+    def call *args
+      write(args)
+      read
+    rescue RuntimeError => exception
+      (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
+    end
+  end
+
+  def self.connect
+    redis = RedisQueue::Connection.new
+    
+    unix_socket = "/tmp/redis.sock"
+    File.socket?(unix_socket) ? redis.connect_unix(unix_socket) : redis.connect("127.0.0.1", 6379)
+    
+    if block_given?
+      yield(redis)
+      redis.disconnect
+    else
+      redis
+    end
+  end
+  
+  def self.list
+    connect do |redis|
+      redis.call("KEYS", "queue.*").collect do |queue|
+        [queue, redis.call("LLEN", queue)]
+      end
+    end
+  end
+  
+  def self.delete queue
+    connect do |redis|
+      redis.call("DEL", queue)
+    end
+  end
+  
+  
   def initialize(name, backup_name = nil)
     @queue = "queue." + name
     @backup_queue = ("queue." + backup_name) if backup_name
     
-    @redis = Hiredis::Connection.new
-    
-    File.socket?("/tmp/redis.sock") ? @redis.connect_unix("/tmp/redis.sock") : @redis.connect("127.0.0.1", 6379)
+    @redis = self.class.connect
   end
   
   # Returns the number of elements inside the queue after the push operation.
   def push element
-    @redis.write ["RPUSH", @queue, element]
-    @redis.read
-  rescue RuntimeError => exception
-    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
+    @redis.call("RPUSH", @queue, element)
   end
 
   # Returns element
   def pop
-    @redis.write ["BRPOP", @queue, 0]
-    @redis.read.last
-  rescue RuntimeError => exception
-    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
+    @redis.call("BRPOP", @queue, 0).last
   end
   
   # Returns element
   def backup_pop
-    @redis.write ["BRPOPLPUSH", @queue, @backup_queue, 0]
-    @redis.read
-  rescue RuntimeError => exception
-    (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
+    @redis.call("BRPOPLPUSH", @queue, @backup_queue, 0)
   end
   
   def remove_backup element
-    @redis.write ["LREM", @backup_queue, -1, element]
-    raise "Queue #{@backup_queue}: not found element #{element.inspect}" if @redis.read != 1
+    if @redis.call("LREM", @backup_queue, -1, element) != 1
+      raise "Queue #{@backup_queue}: not found element #{element.inspect}"
+    end
   end
   
   def disconnect(thread = nil, limit = 10)
