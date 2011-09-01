@@ -18,10 +18,10 @@ require 'thread'
 
 class Thread
   
-  def self.workety
+  def self.workety(*args)
     new do
       begin
-        Workety.rescue_abort { yield }
+        Workety.rescue_abort { yield(*args) }
         
       ensure
         # That block is executed on Thread#kill as well
@@ -36,10 +36,10 @@ class Thread
   end
   
   
-  def self.networkety
+  def self.networkety(*args)
     workety do
       begin
-        yield
+        yield(*args)
       rescue *(Socket::NETWORK_EXEPTIONS) => exception
         Rails.logger.warn "Thread stopped due a network error listed in Socket::NETWORK_EXEPTIONS"
         Rails.logger.warn exception.view
