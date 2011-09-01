@@ -14,24 +14,9 @@
 #  limitations under the License.
 
 
-require 'hiredis'
-
-
 class RedisQueue
-  class Connection < Hiredis::Connection
-    def call *args
-      write(args)
-      read
-    rescue RuntimeError => exception
-      (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
-    end
-  end
-
   def self.connect
-    redis = RedisQueue::Connection.new
-    
-    unix_socket = "/tmp/redis.sock"
-    File.socket?(unix_socket) ? redis.connect_unix(unix_socket) : redis.connect("127.0.0.1", 6379)
+    redis = Hiredis::Connection.local
     
     if block_given?
       result = yield(redis)
