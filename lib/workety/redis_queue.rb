@@ -35,40 +35,57 @@ class RedisQueue
     end
   end
   
-  def self.delete queue
+  def self.delete *queues
     connect do |redis|
-      redis.call("DEL", queue)
+      redis.call("DEL", *queues)
     end
   end
   
   
-  def initialize(name, backup_name = nil)
-    @queue = "queue." + name
-    @backup_queue = ("queue." + backup_name) if backup_name
-    
+  attr_reader :queue
+  
+  def initialize(queue)
+    @queue = queue
     @redis = self.class.connect
   end
   
   # Returns the number of elements inside the queue after the push operation.
-  def push element
-    @redis.call("RPUSH", @queue, element)
+  def push element, queue = @queue
+    @redis.call("LPUSH", "queue." + queue, element)
+  end
+  
+  def error_push element, queue = @queue
+    @redis.call("LPUSH", "queue." + queue + ".error", element)
   end
 
   # Returns element
-  def pop
-    @redis.call("BRPOP", @queue, 0).last
+  def pop queue = @queue
+    @redis.call("BRPOP", "queue." + queue, 0).last
   end
   
   # Returns element
-  def backup_pop
-    @redis.call("BRPOPLPUSH", @queue, @backup_queue, 0)
+  def backup_pop queue = @queue
+    @redis.call("BRPOPLPUSH", "queue." + queue, "queue." + queue + ".backup", 0)
   end
   
-  def remove_backup element
-    if @redis.call("LREM", @backup_queue, -1, element) != 1
-      raise "Queue #{@backup_queue}: not found element #{element.inspect}"
+  def remove_backup element, queue = @queue
+    if @redis.call("LREM", "queue." + queue + ".backup", -1, element) != 1
+      raise "Queue #{"queue." + queue + ".backup"}: not found element #{element.inspect}"
     end
   end
+  
+  def restore_backup queue = @queue
+    while element = @redis.call("RPOP", "queue." + queue + ".backup")
+      if restored = restore_backup_element(element, queue)
+        @redis.call("LPUSH", "queue." + queue, restored)
+      end
+    end
+  end
+  
+  def restore_backup_element element, queue
+    element
+  end
+  
   
   def disconnect(thread = nil, limit = 10)
     begin
