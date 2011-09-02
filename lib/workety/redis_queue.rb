@@ -65,7 +65,14 @@ class RedisQueue
   
   # Returns element
   def backup_pop queue = @queue
-    @redis.call("BRPOPLPUSH", "queue." + queue, "queue." + queue + ".backup", 0)
+    element = @redis.call("BRPOPLPUSH", "queue." + queue, "queue." + queue + ".backup", 0)
+    
+    if block_given?
+      yield(element)
+      remove_backup element, queue
+    else
+      return element
+    end
   end
   
   def remove_backup element, queue = @queue
@@ -84,6 +91,11 @@ class RedisQueue
   
   def restore_backup_element element, queue
     element
+  end
+  
+  def redirect to_queue, queue = @queue
+#    http://code.google.com/p/redis/issues/detail?id=593
+#    @redis.call("BRPOPLPUSH", "queue." + queue, "queue." + to_queue, 0)
   end
   
   

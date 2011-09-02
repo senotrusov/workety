@@ -30,7 +30,13 @@ class RedisQueue::JSON < RedisQueue
   
   def backup_pop queue = @queue
     raw = super(queue)
-    return raw, decode(raw)
+    
+    if block_given?
+      yield decode(raw)
+      remove_backup raw, queue
+    else
+      return raw, decode(raw)
+    end
   end
   
   def encode element
