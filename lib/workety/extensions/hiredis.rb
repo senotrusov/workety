@@ -20,6 +20,7 @@ module Hiredis
   class UnexpectedResult < StandardError; end
   
   class Connection
+    
     def self.local
       redis = new
       unix_socket = "/tmp/redis.sock"
@@ -34,24 +35,29 @@ module Hiredis
       (exception.message == "not connected") ? raise(IOError, "Not connected") : raise(exception)
     end
     
-    # THe following function names and the whole concept it's not very thoughtful, but let's see how it goes 
-    def ok_call *args
-      result = call *args
-      result != "OK" ? raise(Hiredis::UnexpectedResult, "Call #{args.inspect}: received #{result.inspect}, expected 'OK'") : result
+    # The following function names and the whole concept it's not very thoughtful, but let's see how it goes 
+    def assert_ok *args
+      (result = call(*args) == "OK") ? result : raise(Hiredis::UnexpectedResult, "Call #{args.inspect}: received #{result.inspect}, expected 'OK'") 
     end
     
-    def notnil_call *args
-      result = call *args
-      result == nil ? raise(Hiredis::UnexpectedResult, "Call #{args.inspect}: received #{result.inspect}, expected not nil") : result
+    def assert_notnil *args
+      (result = call(*args) != nil ? result) : raise(Hiredis::UnexpectedResult, "Call #{args.inspect}: received #{result.inspect}, expected not nil") 
     end
     
     def multi(watch = [])
       call "MULTI"
-      call *(["WATCH"] + watch) unless watch.empty?
+      call("WATCH", *watch) unless watch.empty?
       yield
       call "EXEC"
-    rescue
-      call "DISCARD"
+    rescue ScriptError, StandardError => exception
+      begin
+        call "DISCARD"
+      rescue ScriptError, StandardError => discard_exception
+        discard_exception.report!
+      ensure
+        raise exception
+      end
     end
+    
   end
 end
