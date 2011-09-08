@@ -25,11 +25,6 @@ require 'workety/extensions/socket.rb'
 require 'workety/extensions/thread.rb'
 require 'workety/extensions/tzinfo.rb' if Gem.available? 'tzinfo'
 
-if Gem.available? 'hiredis'
-  require 'workety/extensions/hiredis.rb'
-  require 'workety/redis_queue.rb'
-  require 'workety/redis_queue_json.rb' if Gem.available? 'yajl-ruby'
-end
 
 require 'workety/timed_exit.rb'
 
