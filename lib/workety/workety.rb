@@ -102,6 +102,12 @@ module Workety
       @mutex.synchronize { @must_stop } 
     end
     
+    def loop
+      until must_stop?
+        yield
+      end
+    end
+    
 
     def rescue_abort
       yield
