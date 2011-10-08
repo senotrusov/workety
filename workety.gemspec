@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Stanislav Senotrusov"]
-  s.date = %q{2011-07-22}
+  s.date = %q{2011-10-09}
   s.default_executable = %q{workety}
   s.email = %q{stan@senotrusov.com}
   s.executables = ["workety"]
@@ -25,19 +25,24 @@ Gem::Specification.new do |s|
     "bin/workety",
     "lib/workety.rb",
     "lib/workety/extensions/exception.rb",
+    "lib/workety/extensions/kernel.rb",
+    "lib/workety/extensions/process.rb",
     "lib/workety/extensions/signal.rb",
     "lib/workety/extensions/socket.rb",
     "lib/workety/extensions/thread.rb",
     "lib/workety/extensions/tzinfo.rb",
-    "lib/workety/simple_thread.rb",
-    "lib/workety/test_thread.rb",
+    "lib/workety/test/simple_thread.rb",
+    "lib/workety/test/test_thread.rb",
+    "lib/workety/timed_exit.rb",
+    "lib/workety/workety.rb",
     "test/logger_init.rb",
     "test/mem_and_load_path.rb",
     "test/new_thread_on_signal.rb",
     "test/server_socket_close.rb",
     "test/server_socket_shutdown.rb",
     "test/signal_handler_exception.rb",
-    "test/stdin_eof.rb"
+    "test/stdin_eof.rb",
+    "workety.gemspec"
   ]
   s.homepage = %q{http://github.com/senotrusov/workety}
   s.require_paths = ["lib"]
