@@ -23,7 +23,6 @@ require 'workety/extensions/process.rb'
 require 'workety/extensions/signal.rb'
 require 'workety/extensions/socket.rb'
 require 'workety/extensions/thread.rb'
-require 'workety/extensions/tzinfo.rb' if Gem.available? 'tzinfo'
 
 
 require 'workety/timed_exit.rb'
