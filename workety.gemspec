@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Stanislav Senotrusov"]
-  s.date = %q{2011-10-09}
+  s.date = %q{2011-12-21}
   s.default_executable = %q{workety}
   s.email = %q{stan@senotrusov.com}
   s.executables = ["workety"]
@@ -30,7 +30,6 @@ Gem::Specification.new do |s|
     "lib/workety/extensions/signal.rb",
     "lib/workety/extensions/socket.rb",
     "lib/workety/extensions/thread.rb",
-    "lib/workety/extensions/tzinfo.rb",
     "lib/workety/test/simple_thread.rb",
     "lib/workety/test/test_thread.rb",
     "lib/workety/timed_exit.rb",
