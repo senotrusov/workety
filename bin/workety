@@ -219,7 +219,7 @@ at_exit { File.delete(pidfile) if delete_pidfile }
 
 # Watchdog process if needed
 #
-WORKETY_RESTART_DELAY = 5
+WORKETY_RESTART_DELAY = 60
 
 module Signal
   # Signal received by watchdog is propogated to child by this helper method
