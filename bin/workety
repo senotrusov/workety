@@ -62,8 +62,11 @@ action = case ARGV.first
 
 ENV['RAILS_ENV'] ||= options[:environment]
 
-unless class_name = ARGV.shift
-  Trollop::die "need class name"
+class_name = ARGV.shift
+
+unless class_name || action == :stop && (options[:name] || options[:pid])
+  STDERR.puts "ERROR: class name required"
+  Process.exit false
 end
 
 
