@@ -94,6 +94,7 @@ class Exception
   
   def report_to_exceptional!
     Exceptional::Remote.error Exceptional::DetailsExceptionData.new(self)
+    Exceptional.context.clear!
   rescue ScriptError, StandardError => ex
     ex.log!
   end
