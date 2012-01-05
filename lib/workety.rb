@@ -16,6 +16,14 @@
 
 require 'pp'
 
+if Gem.available?('exceptional')
+  require 'exceptional'
+  require 'workety/extensions/exceptional.rb'
+end
+
+if Gem.available?('toadhopper')
+  require 'toadhopper'
+end
 
 require 'workety/extensions/exception.rb'
 require 'workety/extensions/kernel.rb'

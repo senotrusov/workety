@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Stanislav Senotrusov"]
-  s.date = %q{2011-12-21}
+  s.date = %q{2012-01-02}
   s.default_executable = %q{workety}
   s.email = %q{stan@senotrusov.com}
   s.executables = ["workety"]
@@ -46,7 +46,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/senotrusov/workety}
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.3.7}
-  s.summary = %q{Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to hoptoad, load rails environment at late stage}
+  s.summary = %q{Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to external tracker, load rails environment at late stage}
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
@@ -54,14 +54,11 @@ Gem::Specification.new do |s|
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<trollop>, [">= 0"])
-      s.add_runtime_dependency(%q<toadhopper>, [">= 0"])
     else
       s.add_dependency(%q<trollop>, [">= 0"])
-      s.add_dependency(%q<toadhopper>, [">= 0"])
     end
   else
     s.add_dependency(%q<trollop>, [">= 0"])
-    s.add_dependency(%q<toadhopper>, [">= 0"])
   end
 end
 

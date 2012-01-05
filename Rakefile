@@ -19,13 +19,12 @@ begin
   
   Jeweler::Tasks.new do |gemspec|
     gemspec.name = "workety"
-    gemspec.summary = "Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to hoptoad, load rails environment at late stage"
+    gemspec.summary = "Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to external tracker, load rails environment at late stage"
     gemspec.email = "stan@senotrusov.com"
     gemspec.homepage = "http://github.com/senotrusov/workety"
     gemspec.authors = ["Stanislav Senotrusov"]
 
     gemspec.add_dependency 'trollop'
-    gemspec.add_dependency 'toadhopper' # TODO: Make optional
   end
   
   Jeweler::GemcutterTasks.new

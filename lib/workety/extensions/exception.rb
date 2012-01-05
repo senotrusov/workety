@@ -14,22 +14,34 @@
 #  limitations under the License.
 
 
-require 'toadhopper'
-
 class Exception
   
   def details
     @details ||= {}
   end
   
-  def self.details(msg = nil, details = {})
-    ex = new(msg)
+  # begin
+  #   raise StandardError.details("ALARM!", :a=>1)
+  # rescue => ex
+  #   puts ex.view
+  # end
+  #
+  def self.details message = nil, details = {}
+    if message.kind_of? Hash
+      message, details = nil, message
+    end
+    
+    ex = new message
     ex.details.merge! details
     ex
   end
   
-  def view more_details = {}
-    "#{summary_view}\n#{details_view(more_details)}#{backtrace_view}"
+  def view!
+    STDERR.write "#{view}\n"
+  end
+
+  def view
+    [summary_view, details_view, backtrace_view].compact.join("\n")
   rescue ScriptError, StandardError
     "ERROR CREATING EXCEPTION VIEW"
   end
@@ -38,64 +50,90 @@ class Exception
     "#{self.class.name}: #{message}"
   end
   
-  def details_view more_details = {}
-    if (merged_details = details.merge(more_details)).any?
-      "Details: #{merged_details.inspect}\n"
-    end
-  rescue ScriptError, StandardError => exception
-    "Details: ERROR CREATING EXCEPTION DETAILS VIEW: #{exception.summary_view}\n#{exception.backtrace_view}\n\n"
+  def details_view
+    "Details: #{details.inspect}" if details.any?
+  rescue ScriptError, StandardError => ex
+    "Details: ERROR CREATING DETAILS VIEW:\n" \
+    "#{ex.summary_view}\n" \
+    "#{ex.backtrace_view}"
   end
   
   def backtrace_view
-    ((bt = backtrace) && bt.collect{|line| "\t#{line}\n"}.join("") || "\tBacktrace undefined")
-  rescue ScriptError, StandardError => exception
-    "\tERROR CREATING BACKTRACE VIEW: #{exception.summary_view}"
+    ((bt = backtrace) && bt.collect{|line|"\t#{line}\n"}.join("") || "\tBacktrace undefined")
+  rescue ScriptError, StandardError => ex
+    "\tERROR CREATING BACKTRACE VIEW: #{ex.summary_view}"
   end
   
   
-  
+  # The following methods should not be called before Rails initialization.
+   
   def logger
     Rails.logger
   end
+  
+  def report!
+    log!
+    report_to_trackers! if Rails.env == "production"
+  end
+  
+  def report_to_trackers!
+    report_to_exceptional! if defined?(Exceptional)
+    report_to_airbrake! if defined?(Toadhopper)
+  end
+  
+  def log!
+    logger.error view
+    logger.flush if logger.respond_to? :flush
+  rescue ScriptError, StandardError => ex
+    STDERR.write "ERROR: LOGGING ANOTHER EXCEPTION THE FOLLOWING EXCEPTION OCCURED:\n" \
+                 "#{ex.view}\n" \
+                 "THE FOLLOWING EXCEPTION WAS NOT STORED IN LOG:\n" \
+                 "#{view}\n"
+  end
+  
+  
+  def report_to_exceptional!
+    Exceptional::Remote.error Exceptional::DetailsExceptionData.new(self)
+  rescue ScriptError, StandardError => ex
+    ex.log!
+  end
+  
   
   # Airbrake API requires the following elements to be present:
   #   /notice/error/class
   #   /notice/error/backtrace/line
   #   /notice/server-environment/environment-name
   #
-  def report! more_details = {}
+  def report_to_airbrake!
+    File.readable?(file = Rails.root + 'config' + 'airbrake.yml') &&
+      (yaml = YAML.load_file file).kind_of?(Hash) &&
+      (api_key = yaml["api-key"]).kind_of?(String) ||
+      raise("Unable to read Airbrake api key from #{file}")
     
-    if ENV['AIRBRAKE_API_KEY'] && Rails.env == "production"
-      begin
-        response = Toadhopper(ENV['AIRBRAKE_API_KEY']).post!(self, ({:framework_env => Rails.env}).merge(details).merge(more_details))
-
-        raise("Tracker responded with status #{response.status}") if response.status != 200
-        
-      rescue ScriptError, StandardError => tracker_exception
-        logger.error "ERROR: EXCEPTION DOES NOT TRANSFERED TO TRACKER"
-        logger.error tracker_exception.view
-        logger.error response.body if response
-      end
-    end      
+    options = if details[:request].kind_of? Hash
+      params = details.dup
+      request = params.delete :request
       
-    logger.error view(more_details)
-    logger.flush if logger.respond_to?(:flush)
+      { url:           request[:url],
+        component:     request[:controller],
+        action:        request[:action],
+        params:        (request[:params] || {}).merge(params),
+        session:       request[:session],
+        framework_env: Rails.env }
+      
+    else
+      { params:        details,
+        framework_env: Rails.env }
+    end
     
-  rescue ScriptError, StandardError => logger_exception
-    STDERR.write "ERROR: EXCEPTION DOES NOT TRANSFERED TO TRACKER AND/OR LOGGED\n"
-    STDERR.write "#{logger_exception.view}\n"
-    STDERR.write "#{view(more_details)}\n"
-  end
-  
-  def view! more_details = {}
-    STDERR.write "#{view(more_details)}\n"
+    response = Toadhopper(api_key).post!(self, options)
+    
+    if response.status != 200
+      raise StandardError.details("Tracker responded with status #{response.status}", body: response.body)
+    end
+    
+  rescue ScriptError, StandardError => ex
+    ex.log!
   end
 end
-
-
-#begin
-#  raise StandardError.details("ALARM!", :a=>1)
-#rescue => ex
-#  puts ex.view
-#end 
 
