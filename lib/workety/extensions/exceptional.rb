@@ -18,8 +18,8 @@ class Exceptional::DetailsExceptionData < Exceptional::ExceptionData
   def initialize exception
     @exception = exception
     @details   = @exception.details.dup
-    @name      = @details.delete :name
-    @request   = @details[:request].kind_of?(Hash) && @details.delete :request
+    @name      = @details.delete(:name)
+    @request   = @details[:request].kind_of?(Hash) && @details.delete(:request)
   end
   
   alias_method :context_stuff_orig, :context_stuff

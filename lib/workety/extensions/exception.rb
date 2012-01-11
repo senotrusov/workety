@@ -109,7 +109,7 @@ class Exception
     File.readable?(file = Rails.root + 'config' + 'airbrake.yml') &&
       (yaml = YAML.load_file file).kind_of?(Hash) &&
       (api_key = yaml["api-key"]).kind_of?(String) ||
-      raise("Unable to read Airbrake api key from #{file}")
+      raise("Unable to read Airbrake api-key from #{file}")
     
     options = if details[:request].kind_of? Hash
       params = details.dup
