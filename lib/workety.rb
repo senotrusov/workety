@@ -16,12 +16,12 @@
 
 require 'pp'
 
-if Gem.available?('exceptional')
+if Gem::Specification.find_all_by_name('exceptional').any?
   require 'exceptional'
   require 'workety/extensions/exceptional.rb'
 end
 
-if Gem.available?('toadhopper')
+if Gem::Specification.find_all_by_name('toadhopper').any?
   require 'toadhopper'
 end
 
