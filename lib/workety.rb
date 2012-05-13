@@ -16,14 +16,27 @@
 
 require 'pp'
 
-if Gem::Specification.find_all_by_name('exceptional').any?
+
+gems = lambda do |name|
+  if Gem::Specification.respond_to?(:find_all_by_name)
+    Gem::Specification.find_all_by_name(name).any?
+  elsif Gem.respond_to?(:available?)
+    Gem.available?(name)
+  else
+    raise "Don't know how to check gem availability"
+  end
+end
+
+
+if gems['exceptional']
   require 'exceptional'
   require 'workety/extensions/exceptional.rb'
 end
 
-if Gem::Specification.find_all_by_name('toadhopper').any?
+if gems['toadhopper']
   require 'toadhopper'
 end
+
 
 require 'workety/extensions/exception.rb'
 require 'workety/extensions/kernel.rb'
