@@ -4,14 +4,13 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{workety}
-  s.version = "2.0.0"
+  s.name = "workety"
+  s.version = "2.0.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Stanislav Senotrusov"]
-  s.date = %q{2012-01-02}
-  s.default_executable = %q{workety}
-  s.email = %q{stan@senotrusov.com}
+  s.date = "2012-09-19"
+  s.email = "stan@senotrusov.com"
   s.executables = ["workety"]
   s.extra_rdoc_files = [
     "LICENSE",
@@ -25,15 +24,18 @@ Gem::Specification.new do |s|
     "bin/workety",
     "lib/workety.rb",
     "lib/workety/extensions/exception.rb",
+    "lib/workety/extensions/exceptional.rb",
     "lib/workety/extensions/kernel.rb",
     "lib/workety/extensions/process.rb",
     "lib/workety/extensions/signal.rb",
     "lib/workety/extensions/socket.rb",
     "lib/workety/extensions/thread.rb",
+    "lib/workety/test/graceful_stop_thread.rb",
     "lib/workety/test/simple_thread.rb",
     "lib/workety/test/test_thread.rb",
     "lib/workety/timed_exit.rb",
     "lib/workety/workety.rb",
+    "test/exception_tracker.rb",
     "test/logger_init.rb",
     "test/mem_and_load_path.rb",
     "test/new_thread_on_signal.rb",
@@ -43,13 +45,12 @@ Gem::Specification.new do |s|
     "test/stdin_eof.rb",
     "workety.gemspec"
   ]
-  s.homepage = %q{http://github.com/senotrusov/workety}
+  s.homepage = "http://github.com/senotrusov/workety"
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
-  s.summary = %q{Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to external tracker, load rails environment at late stage}
+  s.rubygems_version = "1.8.23"
+  s.summary = "Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to external tracker, load rails environment at late stage"
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
