@@ -25,7 +25,6 @@ Run ruby code as a worker.
 workety -e development start Workety::TestThread --foo=bar
 #                      ^^^^^ Start as a daemon 
 #       ^^^^^^^^^^^^^^ Options for Workety       ^^^^^^^^^ Options for the class
-#                                                          (to be parsed by that class)
 
 # run a test thread in the console
 workety Workety::TestThread
