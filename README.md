@@ -12,10 +12,11 @@ Run ruby code as a worker.
 * may use multithreading
 * may send exceptions to external tracker
 * rails environment load at late stage
-* command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library.
+* command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library
 * simple API for application code, see
   [SimpleThread](https://github.com/senotrusov/workety/blob/master/lib/workety/test/simple_thread.rb) and
   [GracefulStopThread](https://github.com/senotrusov/workety/blob/master/lib/workety/test/graceful_stop_thread.rb)
+  for examples.
 
 ### Command-line invocation
 
