@@ -8,6 +8,7 @@ Run ruby code as a worker.
 * signal handling
 * logfile
 * pidfile
+* double process detection
 * may restart in case of failure, by forking from watchdog
 * may use multithreading
 * may send exceptions to an external tracker
