@@ -14,17 +14,85 @@ An infrastructure to create Ruby daemons (workers).
 * Rails environment load at late stage
 * support for mutithreaded workers
 * command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library.
-* simple API for application code, see [examples](https://github.com/senotrusov/workety/tree/master/lib/workety/test)
+* simple API for an application code
 
 
 ### Command-line invocation
 
-```
-# run daemon
-workety -e development start Workety::TestThread --foo=bar
-                       ^^^^^ Start as a daemon 
-        ^^^^^^^^^^^^^^ Options for Workety       ^^^^^^^^^ Options for class (parsed by class)
+```sh
+# run a daemon
+workety -e development start Workety::SimpleThread --foo=bar
+#                      ^^^^^ Start as a daemon 
+#       ^^^^^^^^^^^^^^ Options for Workety         ^^^^^^^^^ Options for the class
 
-# run test thread in console
-workety Workety::TestThread
+# run a thread in the console
+workety Workety::SimpleThread
+```
+
+### SimpleThread example
+
+```ruby
+class SimpleThread
+  # Before dropping privileges 
+  def initialize
+  end
+  
+  # After changing privileges to some user/group
+  def start
+    @t = Thread.workety do
+      until Workety.must_stop? do
+        sleep 1
+      end
+    end
+    
+    Thread.workety do
+      sleep 10
+      Workety.stop
+    end
+  end
+  
+  def join
+    @t.join
+  end
+  
+  def stop
+    @t.kill
+  end
+end
+```
+
+### GracefulStopThread example
+
+```ruby
+class GracefulStopThread
+  # Before dropping privileges 
+  def initialize
+    @mutex = Mutex.new
+    @wakeup = ConditionVariable.new
+  end
+  
+  # After changing privileges to some user/group
+  def start
+    @worker = Thread.workety do
+      @mutex.synchronize do
+        until Workety.must_stop? do
+          
+          puts "Hello"
+          
+          @wakeup.wait(@mutex, 10)
+        end
+      end
+    end
+  end
+  
+  def join
+    @worker.join
+  end
+  
+  def stop
+    @mutex.synchronize do
+      @wakeup.signal
+    end
+  end
+end
 ```
