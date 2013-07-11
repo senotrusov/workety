@@ -1,17 +1,18 @@
 Workety
 =======
 
-Run ruby code as a worker.
+An infrastructure to create Ruby daemons (workers).
 
-* may run as daemon
-* run as user/group
+* process start
+* terminal detach
+* run as user/group (root privileges drop)
 * signal handling
 * logfile
-* pidfile
+* pidfile, check for already running daemon
 * may restart in case of failure, by forking from watchdog
-* may use multithreading
-* may send exceptions to external tracker
-* rails environment load at late stage
+* may send exceptions to Airbrake and Exceptional
+* Rails environment load at late stage
+* support for mutithreaded workers
 * command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library.
 * simple API for application code, see [examples](https://github.com/senotrusov/workety/tree/master/lib/workety/test)
 
