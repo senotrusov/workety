@@ -13,7 +13,7 @@ An infrastructure to create Ruby daemons (workers).
 * may send exceptions to Airbrake and Exceptional
 * Rails environment load at late stage
 * support for mutithreaded workers
-* command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library.
+* command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library
 * simple API for an application code
 
 
