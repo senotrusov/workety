@@ -5,15 +5,15 @@ An infrastructure to create Ruby daemons (workers).
 
 * process start
 * terminal detach
-* run as user/group (root privileges drop)
+* run as a user/group (root privileges drop)
 * signal handling
 * logfile
 * pidfile, check for already running daemon
-* may restart in case of failure, by forking from watchdog
+* may restart in a case of failure, by forking from watchdog
 * may send exceptions to Airbrake and Exceptional
-* Rails environment load at late stage
+* Rails environment load at a late stage
 * support for mutithreaded workers
-* command-line argument parsing by use of [trollop](http://trollop.rubyforge.org) library
+* command-line argument parsing by use of the [trollop](http://trollop.rubyforge.org) library
 * simple API for an application code
 
 
