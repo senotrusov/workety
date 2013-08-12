@@ -1,7 +1,7 @@
 Workety
 =======
 
-An infrastructure to create Ruby daemons (workers).
+A library to run a ruby class as a daemon.
 
 * process start
 * terminal detach
