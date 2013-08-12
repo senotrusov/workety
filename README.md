@@ -1,7 +1,7 @@
 Workety
 =======
 
-A library to run ruby classes as daemons.
+A library to Run ruby classes as daemons.
 
 * process start
 * terminal detach
