@@ -96,10 +96,11 @@ class GracefulStopThread
 end
 ```
 
+
 ## Copyright and License
 
 ```
-Copyright 2006-2011 Stanislav Senotrusov <stan@senotrusov.com>
+Copyright 2006-2011 Stanislav Senotrusov
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -113,3 +114,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
+
+## Contributing
+
+Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.

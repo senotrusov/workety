@@ -16,20 +16,20 @@
 
 begin
   require 'jeweler'
-  
+
   Jeweler::Tasks.new do |gemspec|
     gemspec.name = "workety"
-    gemspec.summary = "Concise way to run ruby code as a worker - may be daemonized, may be forked from watchdog, may be multithreaded, may send exceptions to external tracker, load rails environment at late stage"
-    gemspec.email = "stan@senotrusov.com"
-    gemspec.homepage = "http://github.com/senotrusov/workety"
+    gemspec.licenses = ['Apache-2.0']
+    gemspec.summary = "Run Ruby/Rails code as a worker: detach, signals, watchdog, threads, reporting"
     gemspec.authors = ["Stanislav Senotrusov"]
+    gemspec.email = "stan@senotrusov.com"
+    gemspec.homepage = "https://github.com/senotrusov/workety"
 
     gemspec.add_dependency 'trollop'
   end
-  
+
   Jeweler::GemcutterTasks.new
-  
+
 rescue LoadError
   puts "Jeweler not available. Install it with: gem install jeweler"
 end
-
